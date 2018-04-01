@@ -2,3 +2,5 @@
 .DS_Store
 *.xml
 seg_src/.idea/misc.xml
+seg_src/.idea/seg_src.iml
+seg_src/.idea/workspace.xml
