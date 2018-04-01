@@ -1,0 +1,36 @@
+function selBasis=BasisBestSelection(img,kernelparas,M,debug)
+
+if nargin < 4, debug = 0; end
+
+optparas=struct('w_smooth_spatio',0.3,'w_sparsity',0.5,'sel',20,'epsilon',3,'gamma',3,'m_scale',1,'maxiter',100,'tol',10);
+%% Inner production calculation for phase contrast image and 
+[nrow,ncol]=size(img);
+
+for m=1:M
+   if debug
+       fprintf('Calculate inner production with %sth basis\n', num2str(m));
+   end
+   ang=2*pi/M*m;
+   kernel=getKernel(kernelparas,ang,0);
+   basis=imgfun(kernel,nrow,ncol);
+
+   resfeature=basis*img(:); %inner product of kernel and phase contrast image 
+   resfeature=reshape(resfeature,nrow,ncol);
+
+   resfeature(resfeature<0)=0;
+   nf=resfeature/max(resfeature(:));
+   bwimg=im2bw(nor,graythresh(resfeature));
+   resfeature=resfeature.*bwimg;
+   discrim(m)=sum(abs(resfeature(:))); %l_1 norm of inner production 
+   
+  % resimg=PhaseContrastSegParam(basis, img, optparas,debug); 
+   
+ %   discrim(m)=sum(bwimg(:));
+    if debug
+        figure(10)
+        imshow(normalize(resfeature))
+        title(['Inner production of basis with phase retardation ' num2str(m) '\times 2\pi/' num2str(M) ' and original image'] )
+    end
+end
+[val,pos]=max(discrim);
+selBasis=pos; 
