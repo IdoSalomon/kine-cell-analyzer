@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
 import matplotlib.image as mpimg
 
 
@@ -63,7 +64,61 @@ def bg_removal(img, debug=False):
     fig.savefig('testFig.png')
 
 def normalize(img):
-    print("todo")
+    """
+    Normalize the image [0, 1]
+
+    Parameters
+    ----------
+    img : ndarray
+        3D array that represents image
+
+    Returns
+    -------
+    Normalized image
+
+    """
+
+    min_val = min(img[:])
+    max_val = max(img[:])
+
+    if min_val == max_val:
+        return np.zeros(np.size(img));
+
+    norm = (img - min_val) / (max_val - min_val)
+
+    return np.sqrt((2 * norm) - np.power(norm, 2))
+
+
+def get_dim(img):
+    """
+    Returns image dimensions
+
+    Parameters
+    ----------
+    img : ndarray
+        3D array that represents image
+
+    Returns
+    -------
+    (image rows, image columns)
+    """
+
+    try:
+        img_dim = (img.shape[0], img.shape[1])
+    except IndexError:
+        img_dim = (1, img.shape[0])
+    return img_dim
+
+
+def resize_img(img, img_scale):
+    if img_scale < 1:
+        # Enlarge image
+        img_resize = cv2.resize(img,(img_scale, img_scale), cv2.INTER_AREA) # TODO redo cv
+        img = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
+    elif img_scale > 1:
+        # Shrink image
+        img_resize = cv2.resize(img,(img_scale, img_scale), cv2.INTER_CUBIC) # TODO redo cv
+        img = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
 
 
 if __name__ == "__main__":
