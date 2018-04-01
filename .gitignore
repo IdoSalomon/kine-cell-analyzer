@@ -1,2 +1,4 @@
 
 .DS_Store
+*.xml
+seg_src/.idea/misc.xml
