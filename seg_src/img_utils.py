@@ -63,6 +63,8 @@ def bg_removal(img, debug=False):
     plt.title('background image:')
     fig.savefig('testFig.png')
 
+    return flattened
+
 def normalize(img):
     """
     Normalize the image [0, 1]
