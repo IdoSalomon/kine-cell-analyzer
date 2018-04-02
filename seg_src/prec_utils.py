@@ -219,6 +219,7 @@ def phase_seg(basis, img, opt_params, debug=False):
 
     # Calculate spatial smoothness term
     # TODO
+    inds = np.reshape(np.arange(0, N), nrows, ncols) # inds = (xx - 1) * nrows + yy;
 
     # Get prior
     sigma = 2.5
@@ -257,16 +258,38 @@ def phase_seg(basis, img, opt_params, debug=False):
     iMag = round(nMagBin * (mag[:]-minmag) / (maxmag-minmag)) + 1
 
     # Look up the prior
-    #prior_f = reshape(prior((iMag-1)*(nImBin+1)+iIm),[nrows, ncols])
-    #prior_f[prior_f <= 0] = 0.00001 #avoid nonpositive initial point
+    prior_f = np.reshape(prior[(iMag-1) * (nImBin+1) + iIm],[nrows, ncols], order='F')
+    prior_f[prior_f <= 0] = 0.00001 # avoid nonpositive initial point
 
+    # Deconvolution Items
+    A = HH + w_smooth_spatio * L
+    btmp = img_phase[:].dot(-H.conj().T)
+    Ap = (np.abs(A) + A) / 2 # positive elements of A
+    An = (np.abs(A) - A) / 2 # negative elements of A
+    f = prior_f[:]
+    f[f == 0] = 0.000001
+    W0 = np.ones((N, 1))
+    W = W0
+    err = np.zeros((maxiter, 1))
 
+    # Optimization
+    for iter in range(maxiter):
+        b = btmp + w_sparsity * W
+        tmp = Ap * f
+        newf = 0.5 * f * (-b + np.sqrt(b ** 2 + 4 * tmp * (An * f))) / (tmp + np.spacing(1))
+        W = W0 / (newf + gamma)
+        err[iter] = np.sum(abs(f - newf))
 
+        if err[iter] < epsilon:
+            break
+        f = newf
+
+    return np.reshape(f, nrows, ncols, order='F')
 
 
 def calc_basis(kernel, nrows, ncols):
     """
-    
+
     Parameters
     ----------
     kernel

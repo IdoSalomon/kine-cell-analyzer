@@ -88,8 +88,17 @@ def normalize(img):
     -------
         2D array of normalized image
     """
-
     return cv2.normalize(img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+
+    """min_val = np.min(img[:])
+    max_val = np.max(img[:])
+
+    if min_val == max_val:
+        return np.zeros(np.size(img))
+
+    norm = (img - min_val) / (max_val - min_val)
+
+    return np.sqrt((2 * norm) - np.power(norm, 2))"""
 
 
 def get_dim(img):
