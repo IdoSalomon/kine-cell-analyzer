@@ -5,7 +5,7 @@ import img_utils as imtil
 import debug_utils as dbg
 import numpy as np
 from scipy import sparse
-
+import math
 from scipy import special
 
 
@@ -219,16 +219,16 @@ def phase_seg(basis, img, opt_params, debug=False):
 
     # Calculate spatial smoothness term
     # TODO
-    inds = np.reshape(np.arange(0, N), nrows, ncols) # inds = (xx - 1) * nrows + yy;
+    inds = np.reshape(np.arange(0, N), (nrows, ncols), order='F') # inds = (xx - 1) * nrows + yy;
 
     # Get prior
     sigma = 2.5
     GaussHwd = 8
-    x = np.arange(-GaussHwd, GaussHwd)
-    GAUSS = np.math.exp(-0.5 * x ** 2 / np.pow(sigma, 2))
-    GAUSS = GAUSS / GAUSS.sum(axis=0)
-    dGAUSS = -x * GAUSS / np.pow(sigma, 2)
-    kernelx = dGAUSS.dot(GAUSS.conj().T);
+    x = np.arange(-GaussHwd, GaussHwd) # FIXME check range
+    GAUSS = np.math.exp(-0.5 * x ** 2 / np.math.pow(sigma, 2)) # FIXME nominator not a scalar
+    GAUSS = GAUSS / GAUSS.sum(axis=0) # FIXME find equivalent
+    dGAUSS = -x * GAUSS / np.math.pow(sigma, 2)
+    kernelx = dGAUSS.dot(GAUSS.conj().T)
     kernely = kernelx.conj().T;
     nImBin = 31
     nMagBin = 31
