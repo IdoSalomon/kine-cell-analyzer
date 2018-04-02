@@ -12,7 +12,7 @@ def bg_removal(img, debug=False):
     Parameters
     ----------
     img : ndarray
-        3D array that represents image
+        2D array that represents image
     debug : bool
         Boolean that dictates if function is in debug mode
 
@@ -24,6 +24,7 @@ def bg_removal(img, debug=False):
 
     # copy source image
     bg = np.copy(img)
+
     print(bg) # Debug
 
     # get image dimensions
@@ -66,9 +67,10 @@ def bg_removal(img, debug=False):
     if debug:
         imgs = [(img, 'original image:'), (flattened, 'flattened image:'), (bg, 'background image:')]
         dbg.save_debug_fig(imgs, 'bgRemoval.png')
-
+        cv2.imwrite("dbg\\bg_removal_flattened.png", flattened)
 
     return flattened
+
 
 def normalize(img):
     """
@@ -77,11 +79,11 @@ def normalize(img):
     Parameters
     ----------
     img : ndarray
-        3D array that represents image
+        2D array that represents image
 
     Returns
     -------
-        3D array of normalized image
+        2D array of normalized image
     """
 
     min_val = min(img[:])
@@ -102,7 +104,7 @@ def get_dim(img):
     Parameters
     ----------
     img : ndarray
-        3D array that represents image
+        2D array that represents image
 
     Returns
     -------
@@ -122,7 +124,7 @@ def resize_img(img, img_scale):
     Parameters
     ----------
     img : ndarray
-        3D array that represents image
+        2D array that represents image
 
     img_scale : int
         Scale factor
@@ -130,21 +132,19 @@ def resize_img(img, img_scale):
     Returns
     -------
     img_resize : ndarray
-        3D array of resized image
+        2D array of resized image
     """
 
     img_dim = get_dim(img)
 
     if img_scale < 1:
         # Shrink image
-        img_resize=cv2.resize(img, (img_dim[0] * img_scale, img_dim[1] * img_scale), interpolation=cv2.INTER_AREA) # Expects opencv compatible array
-        img_resize = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
+        img_resize=cv2.resize(img, (round(img_dim[1] * img_scale), round(img_dim[0] * img_scale)), interpolation=cv2.INTER_AREA) # Expects opencv compatible array
         return img_resize
     if img_scale > 1:
         # Enlarge image
-        img_resize=cv2.resize(img, (img_dim[0] * img_scale, img_dim[1] * img_scale), interpolation=cv2.INTER_CUBIC) # Expects opencv compatible array
-        #img_resize = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
-        img_resize = np.array(img_resize) # convert image to ndarray
+        img_resize=cv2.resize(img, (img_dim[1] * img_scale, img_dim[0] * img_scale), interpolation=cv2.INTER_CUBIC) # Expects opencv compatible array
+        #img_resize = np.array(img_resize) # convert image to ndarray
         return img_resize
 
     return img

@@ -4,6 +4,9 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
+from debug_utils import save_debug_fig
+
+
 def prec_sparse(img, opt_params, ker_params, debug):
     """
     Creates reconditioned image
@@ -11,7 +14,7 @@ def prec_sparse(img, opt_params, ker_params, debug):
     Parameters
     ----------
     img : ndarray
-        3D array that represents image
+        2D array that represents image
     opt_params : OptParams
         optimization parameters
     ker_params : KerParams
@@ -21,22 +24,16 @@ def prec_sparse(img, opt_params, ker_params, debug):
     Returns
     -------
     img_proc : ndarray
-        3D array of preconditioned image
+        2D array of preconditioned image
     """
 
     # Initialize image
     if opt_params.img_scale != 1:
-        img_utils.resize_img(img, opt_params.img_scale)
+        img = img_utils.resize_img(img, opt_params.img_scale)
 
     # Remove image background
     print("Removing background\n")
     img = img_utils.bg_removal(img, debug)
-
-    if debug:
-        # Display background removal result
-        plt.axis("off")
-        plt.imshow(img)
-        plt.show()
 
     # Sparse representation
     num_basis = opt_params.sel_basis # total num of basis
@@ -72,12 +69,9 @@ def prec_sparse(img, opt_params, ker_params, debug):
         img_proc[:, :, sel_ind] = img_utils.normalize(resd_img[:, :, sel_ind])
 
         if debug:
-            # Display residual image
-            plt.imshow(rimg)
-            plt.show()
-            # Display restoration result
-            plt.imshow(img_proc[:,:, sel_ind])
-            plt.show()
+            # Display residual and restored images
+            imgs = [(rimg, 'Residual image:'), (img_proc, 'Restored image:')]
+            save_debug_fig(imgs, 'prec_sparse.png')
 
         if np.norm(resd_img[:, :, sel_ind]) / np.norm(resd_img[:, :, 1]) < 0.01:
             break
