@@ -5,15 +5,24 @@ import matplotlib.image as mpimg
 
 
 def bg_removal(img, debug=False):
-    '''
-    :param img:
-    :param debug:
-    :return:
-    '''
+    """
+    Removes background from image
+
+    Parameters
+    ----------
+    img : ndarray
+        3D array that represents image
+    debug : bool
+        Boolean that dictates if function is in debug mode
+
+    Returns
+    -------
+
+    """
 
     # copy source image
     bg = np.copy(img)
-    print(bg)
+    print(bg) # Debug
 
     # get image dimensions
     rows_no = np.size(bg, 0)
@@ -23,49 +32,51 @@ def bg_removal(img, debug=False):
     # create grids
     xx, yy = np.meshgrid(np.arange(1., cols_no + 1), np.arange(1., rows_no + 1))
 
-    print(xx)
-    print(yy)
+    print(xx) # Debug
+    print(yy) # Debug
 
     # turn grids 2D arrays into vectors (F - column major)
     xx = xx.flatten(order='F')
     yy = yy.flatten(order='F')
 
-    print(xx)
-    print(yy)
+    print(xx) # Debug
+    print(yy) # Debug
 
     X = np.array([np.ones(N), xx, yy, (xx ** 2), (xx * yy), (yy ** 2)]).T
 
     # solve linear system
     p = np.linalg.lstsq(X, img.flatten(order='F'), rcond=None)[0]
-    print(p[0])
+    print(p[0]) # Debug
 
     # np.reshape()
     #
-    print('last')
-    print(img.flatten(order='F'))
-    print(np.dot(X, p))
+    print('last') # Debug
+    print(img.flatten(order='F')) # Debug
+    print(np.dot(X, p)) # Debug
     res = np.subtract(img.flatten(order='F'), np.dot(X, p))
     flattened = np.reshape(res, np.array([rows_no, cols_no]))
     bg = np.reshape(np.dot(X, p), np.array([rows_no, cols_no]))
 
-    print(img)
-    print(bg)
-    fig = plt.figure()
-    fig.add_subplot(3, 3, 1)
-    plt.imshow(img, cmap=plt.cm.gray)
-    
-    plt.title('original image:')
-    fig.add_subplot(3, 3, 2)
-    plt.imshow(flattened, cmap=plt.cm.gray)
-    plt.title('flattened image:')
-    fig.add_subplot(3, 3, 3)
-    plt.imshow(bg, cmap=plt.cm.gray)
-    plt.title('background image:')
-    fig.savefig('testFig.png')
+    print(img) # Debug
+    print(bg) # Debug
+
+    if debug:
+        fig = plt.figure()
+        fig.add_subplot(3, 3, 1)
+        plt.imshow(img, cmap=plt.cm.gray)
+        plt.title('original image:')
+        fig.add_subplot(3, 3, 2)
+        plt.imshow(flattened, cmap=plt.cm.gray)
+        plt.title('flattened image:')
+        fig.add_subplot(3, 3, 3)
+        plt.imshow(bg, cmap=plt.cm.gray)
+        plt.title('background image:')
+        fig.savefig('testFig.png')
+
 
 def normalize(img):
     """
-    Normalize the image [0, 1]
+    Normalize the image elements to [0, 1]
 
     Parameters
     ----------
@@ -74,8 +85,7 @@ def normalize(img):
 
     Returns
     -------
-    Normalized image
-
+        3D array of normalized image
     """
 
     min_val = min(img[:])
@@ -111,16 +121,33 @@ def get_dim(img):
 
 
 def resize_img(img, img_scale):
+    """
+
+    Parameters
+    ----------
+    img : ndarray
+        3D array that represents image
+
+    img_scale : int
+        Scale factor
+
+    Returns
+    -------
+    img_resize : ndarray
+        3D array of resized image
+    """
     if img_scale < 1:
         # Enlarge image
         img_resize = cv2.resize(img,(img_scale, img_scale), cv2.INTER_AREA) # TODO redo cv
-        img = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
+        img_resize = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
     elif img_scale > 1:
         # Shrink image
         img_resize = cv2.resize(img,(img_scale, img_scale), cv2.INTER_CUBIC) # TODO redo cv
-        img = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
+        img_resize = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
+
+    return img_resize
 
 
 if __name__ == "__main__":
     img = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
-    bg_removal(img)
+    bg_removal(img, True)
