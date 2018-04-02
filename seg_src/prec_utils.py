@@ -1,4 +1,6 @@
 import prec_params as param
+import img_utils as imtil
+import debug_utils as dbg
 import numpy as np
 
 def get_kernel(ker_params, angle, debug = False):
@@ -13,11 +15,16 @@ def validate_opt_params(opt_params):
 def basis_select(img, ker_params, M, debug = False):
     '''
 
-    :param img:
-    :param ket_params:
-    :param M:
-    :param debug:
-    :return:
+    Parameters
+    ----------
+    img
+    ker_params
+    M
+    debug
+
+    Returns
+    -------
+
     '''
 
     # get image dimensions
@@ -26,6 +33,7 @@ def basis_select(img, ker_params, M, debug = False):
     N = cols_no * rows_no
 
     innerNorm = np.empty(M)
+    imgs = []
     for m in range(1, M):
         angle = 2 * np.pi / (M * m)
         kernel = get_kernel(ker_params, angle, 0)
@@ -42,7 +50,10 @@ def basis_select(img, ker_params, M, debug = False):
         innerNorm[m] = np.linalg.norm(res_feature_flat)
 
         if debug:
-            print("debug")
+            imgs += [(imtil.normalize(res_feature), 'Inner Production of basis with phase retardation' + str(m) + 'times 2*pi' )]
+
+    if debug:
+        dbg.save_debug_fig(imgs, 'basis_select.png')
 
     return innerNorm.argmax()
 
