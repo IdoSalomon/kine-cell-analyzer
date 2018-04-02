@@ -1,5 +1,6 @@
 import scipy
 
+import prec_params as param
 import img_utils as imtil
 import debug_utils as dbg
 import numpy as np
@@ -199,8 +200,9 @@ def somb(mat):
     return smb
 
 
-def phase_seg(basis, img, opt_params, debug = False):
+def phase_seg(basis, img, opt_params, debug=False):
     # Initialize
+    img_phase = img.copy
     w_smooth_spatio = opt_params.smooth_weight
     w_sparsity = opt_params.spars_weight
     epsilon = opt_params.epsilon
@@ -216,17 +218,65 @@ def phase_seg(basis, img, opt_params, debug = False):
     H = H.dot(H.conj())
 
     # Calculate spatial smoothness term
+    # TODO
+
+    # Get prior
+    sigma = 2.5
+    GaussHwd = 8
+    x = np.arange(-GaussHwd, GaussHwd)
+    GAUSS = np.math.exp(-0.5 * x ** 2 / np.pow(sigma, 2))
+    GAUSS = GAUSS / GAUSS.sum(axis=0)
+    dGAUSS = -x * GAUSS / np.pow(sigma, 2)
+    kernelx = dGAUSS.dot(GAUSS.conj().T);
+    kernely = kernelx.conj().T;
+    nImBin = 31
+    nMagBin = 31
+    nfBin = 31
+
+    # Load trained data TODO seq_train
+    immag_data = scipy.io.loadmat("data\\ImMagFRange2.58313131.mat")
+    prior_data = scipy.io.loadmat("data\\PriorAndCfd2.58313131.mat")
+    maxim = immag_data['maxim']
+    minim = immag_data['minim']
+    maxmag = immag_data['maxmag']
+    minmag = immag_data['minmag']
+    maxf = immag_data['maxf']
+    minf = immag_data['minf']
+    prior = prior_data['prior']
+
+    dx = scipy.ndimage.correlate(img_phase, kernelx, mode='constant').transpose()  # x direction
+    dy = scipy.ndimage.correlate(img_phase, kernely, mode='constant').transpose()  # y direction
+    mag = np.sqrt(dx ** 2 + dy ** 2)
+
+    # Get bin index
+    mag[mag > maxmag] = maxmag
+    mag[mag < minmag] = minmag
+    img_phase[img_phase > maxim] = maxim
+    img_phase[img_phase < minim] = minim
+    iIm = round(nImBin * (img_phase[:] - minim) / (maxim - minim)) + 1
+    iMag = round(nMagBin * (mag[:]-minmag) / (maxmag-minmag)) + 1
+
+    # Look up the prior
+    #prior_f = reshape(prior((iMag-1)*(nImBin+1)+iIm),[nrows, ncols])
+    #prior_f[prior_f <= 0] = 0.00001 #avoid nonpositive initial point
+
+
 
 
 
 def calc_basis(kernel, nrows, ncols):
-    '''
+    """
+    
+    Parameters
+    ----------
+    kernel
+    nrows
+    ncols
 
-    :param kernel:
-    :param nrows:
-    :param ncols:
-    :return:
-    '''
+    Returns
+    -------
+
+    """
 
     diameter = np.size(kernel, 1)
     radius = round((diameter - 1) / 2.0)
