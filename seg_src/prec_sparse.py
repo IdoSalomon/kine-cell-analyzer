@@ -25,7 +25,8 @@ def prec_sparse(img, opt_params, ker_params, debug):
     """
 
     # Initialize image
-    img_utils.resize_img(img, opt_params.img_scale)
+    if opt_params.img_scale != 1:
+        img_utils.resize_img(img, opt_params.img_scale)
 
     # Remove image background
     print("Removing background\n")
@@ -38,7 +39,6 @@ def prec_sparse(img, opt_params, ker_params, debug):
         plt.show()
 
     # Sparse representation
-
     num_basis = opt_params.sel_basis # total num of basis
     dict_size = ker_params.dict_size # dictionary size
     sel_basis = np.zeros(num_basis) # init basis array

@@ -8,6 +8,7 @@ OptParams represents the optimization parameters.
 
 import numpy as np
 
+
 class KerParams:
     """
     Represents kernel parameters.
@@ -31,6 +32,7 @@ class KerParams:
         self.ker_rad = ker_rad # Kernel radius
         self.zetap = zetap # Amplitude attenuation factors caused by phase ring
         self.dict_size = dict_size # Size of dictionary
+
 
 class OptParams:
     """
