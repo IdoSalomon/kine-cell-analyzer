@@ -154,7 +154,7 @@ def basis_select(img, ker_params, M, debug = False):
         kernel = get_kernel(ker_params, angle, debug)
         basis = calc_basis(kernel, rows_no, cols_no)
 
-        res_feature = np.dot(basis, img.flatten(order='F'))
+        res_feature = basis.dot(img.flatten(order='F'))
         res_feature = np.reshape(res_feature, (rows_no, cols_no))
 
         # nullify negative elements

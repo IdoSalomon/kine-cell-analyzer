@@ -66,7 +66,7 @@ def prec_sparse(img, opt_params, ker_params, debug):
 
         # Calculate coefficient
         print("Calculate coefficient of the {}th basis\n", sel_ind)
-        resd_img[:,:, sel_ind] = np.reshape(prec_utils.phase_seg(basis, rimg, opt_params, debug), img_dim[0], img_dim[1])
+        resd_img[:,:, sel_ind] = np.reshape(prec_utils.phase_seg(basis, rimg, opt_params, debug), (img_dim[0], img_dim[1]), order='F')
 
         # Update residual error
         print("Residual error update\n")
