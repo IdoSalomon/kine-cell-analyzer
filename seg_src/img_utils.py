@@ -17,6 +17,8 @@ def bg_removal(img, debug=False):
 
     Returns
     -------
+    flattened : ndarray
+        3D array that represents image w/o background
 
     """
 
@@ -72,6 +74,8 @@ def bg_removal(img, debug=False):
         plt.imshow(bg, cmap=plt.cm.gray)
         plt.title('background image:')
         fig.savefig('testFig.png')
+
+    return flattened
 
 
 def normalize(img):
@@ -136,17 +140,22 @@ def resize_img(img, img_scale):
     img_resize : ndarray
         3D array of resized image
     """
+
+    img_dim = get_dim(img)
+
     if img_scale < 1:
-        # Enlarge image
-        img_resize = cv2.resize(img,(img_scale, img_scale), cv2.INTER_AREA) # TODO redo cv
-        img_resize = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
-    elif img_scale > 1:
         # Shrink image
-        img_resize = cv2.resize(img,(img_scale, img_scale), cv2.INTER_CUBIC) # TODO redo cv
+        img_resize=cv2.resize(img, (img_dim[0] * img_scale, img_dim[1] * img_scale), interpolation=cv2.INTER_AREA) # Expects opencv compatible array
         img_resize = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
+        return img_resize
+    if img_scale > 1:
+        # Enlarge image
+        img_resize=cv2.resize(img, (img_dim[0] * img_scale, img_dim[1] * img_scale), interpolation=cv2.INTER_CUBIC) # Expects opencv compatible array
+        #img_resize = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
+        img_resize = np.array(img_resize) # convert image to ndarray
+        return img_resize
 
-    return img_resize
-
+    return img
 
 if __name__ == "__main__":
     img = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
