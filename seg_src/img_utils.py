@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import matplotlib.image as mpimg
+import debug_utils as dbg
 
 
 def bg_removal(img, debug=False):
@@ -17,7 +18,8 @@ def bg_removal(img, debug=False):
 
     Returns
     -------
-
+    flattened : :class:`~matplotlib.text.Text`
+        a copy of the image with its background removed
     """
 
     # copy source image
@@ -53,25 +55,18 @@ def bg_removal(img, debug=False):
     print('last') # Debug
     print(img.flatten(order='F')) # Debug
     print(np.dot(X, p)) # Debug
+
     res = np.subtract(img.flatten(order='F'), np.dot(X, p))
     flattened = np.reshape(res, np.array([rows_no, cols_no]))
-    bg = np.reshape(np.dot(X, p), np.array([rows_no, cols_no]))
+    bg = np.reshape(np.dot(X, p), (rows_no, cols_no))
 
     print(img) # Debug
     print(bg) # Debug
 
     if debug:
-        fig = plt.figure()
-        fig.add_subplot(3, 3, 1)
-        plt.imshow(img, cmap=plt.cm.gray)
-        plt.title('original image:')
-        fig.add_subplot(3, 3, 2)
-        plt.imshow(flattened, cmap=plt.cm.gray)
-        plt.title('flattened image:')
-        fig.add_subplot(3, 3, 3)
-        plt.imshow(bg, cmap=plt.cm.gray)
-        plt.title('background image:')
-        fig.savefig('testFig.png')
+        imgs = [(img, 'original image:'), (flattened, 'flattened image:'), (bg, 'background image:')]
+        dbg.save_debug_fig(imgs, 'bgRemoval.png')
+
 
 
     return flattened
@@ -148,7 +143,6 @@ def resize_img(img, img_scale):
         img_resize = cv2.cvtColor(img_resize, cv2.COLOR_BGR2RGB)
 
     return img_resize
-
 
 if __name__ == "__main__":
     img = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
