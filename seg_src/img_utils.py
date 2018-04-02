@@ -24,9 +24,6 @@ def bg_removal(img, debug=False):
 
     # copy source image
     bg = np.copy(img)
-    
-    print('src image:')
-    print(bg) # Debug
 
     # get image dimensions
     rows_no = np.size(bg, 0)
@@ -36,43 +33,20 @@ def bg_removal(img, debug=False):
     # create grids
     xx, yy = np.meshgrid(np.arange(1., cols_no + 1), np.arange(1., rows_no + 1))
 
-    print(xx) # Debug
-    print(yy) # Debug
-
     # turn grids 2D arrays into vectors (F - column major)
     xx = xx.flatten(order='F')
     yy = yy.flatten(order='F')
 
-    print(xx) # Debug
-    print(yy) # Debug
-
     X = np.array([np.ones(N), xx, yy, (xx ** 2), (xx * yy), (yy ** 2)]).T
-    print('X=')
-    print(X)
+
     # solve linear system
     p = np.array(np.linalg.lstsq(X, img.flatten(order='F'), rcond=None)[0])
-    print('p=')
-    print(p) # Debug
-
-    # np.reshape()
-    #
-    print('im(:)=')
-    print(img.flatten(order='F')) # Debug
-    print('X*p=')
-    print(np.dot(X, p)) # Debug
-
 
     res = img.flatten(order='F') - np.dot(X, p)
-    print("im(:)-X*p=")
-    print(res)
+
     flattened = np.reshape(res, np.array([rows_no, cols_no]), order='F')
-    print("flattened result =")
-    print(flattened) # Debug
 
-    print('bg =')
     bg = np.reshape(np.dot(X, p), (rows_no, cols_no), order='F')
-
-    print(bg) # Debug
 
     if debug:
         imgs = [(img, 'original image:'), (flattened, 'flattened image:'), (bg, 'background image:')]

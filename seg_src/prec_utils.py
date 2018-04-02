@@ -2,6 +2,8 @@ import prec_params as param
 import img_utils as imtil
 import debug_utils as dbg
 import numpy as np
+import scipy as sci
+import math
 
 
 def get_kernel(ker_params, angle, debug = False):
@@ -80,5 +82,44 @@ def phase_seg(basis, img, optparams, debug = False):
     return img
 
 
-def calc_basis(kernel, rows, cols):
+def calc_basis(kernel, nrows, ncols):
+
+    diameter = np.size(kernel, 1)
+    radius = round((diameter - 1) / 2.0)
+    kernel = kernel.flatten(order='F')
+    N = nrows * ncols
+
+    # build sparse matrix H
+    logic_arr = (abs(kernel) > 0.01)
+    logic_arr = np.array([int(x) for x in logic_arr])
+
+    inds = np.reshape(np.arange(1, N+1), (nrows, ncols), order='F')
+
+    inds_pad = np.pad(inds, np.array([radius, radius]), mode='symmetric')
+
+    rows_inds = np.tile(np.arange(1, N+1), (sum(logic_arr), 1))
+    col_inds = im2col_sliding_strided(inds_pad.T, (diameter, diameter))
+    print(col_inds)
+
+    logic_arr = logic_arr[:, None]
+    col_inds = np.array([col_inds[i][j]np.tile(logic_arr, (1,N))])
+
+    print(col_inds)
     print("CALLED CALC_BASIS")
+
+def im2col_sliding_strided(A, BSZ, stepsize=1):
+    # Parameters
+    m,n = A.shape
+    s0, s1 = A.strides
+    nrows = m-BSZ[0]+1
+    ncols = n-BSZ[1]+1
+    shp = BSZ[0],BSZ[1],nrows,ncols
+    strd = s0,s1,s0,s1
+
+    out_view = np.lib.stride_tricks.as_strided(A, shape=shp, strides=strd)
+    return out_view.reshape(BSZ[0]*BSZ[1],-1)[:,::stepsize]
+
+
+if __name__ == "__main__":
+    kernel = np.array([[2,1,0], [0, 1, 0], [0, 0, 1]])
+    calc_basis(kernel, 3, 3)
