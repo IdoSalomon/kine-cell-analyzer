@@ -7,7 +7,7 @@ DBG_DIR = 'dbg'
 def save_debug_fig(images, fig_name, ncols=1):
     nrows = math.ceil(len(images) / float(ncols))
 
-    fig = plt.figure(figsize=(ncols+2, nrows+2))
+    fig = plt.figure(figsize=(ncols*2, nrows*2))
 
     for i in range(1, len(images) + 1):
         fig.add_subplot(nrows, ncols, i)

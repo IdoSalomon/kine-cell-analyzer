@@ -24,7 +24,8 @@ def bg_removal(img, debug=False):
 
     # copy source image
     bg = np.copy(img)
-
+    
+    print('src image:')
     print(bg) # Debug
 
     # get image dimensions
@@ -46,22 +47,31 @@ def bg_removal(img, debug=False):
     print(yy) # Debug
 
     X = np.array([np.ones(N), xx, yy, (xx ** 2), (xx * yy), (yy ** 2)]).T
-
+    print('X=')
+    print(X)
     # solve linear system
-    p = np.linalg.lstsq(X, img.flatten(order='F'), rcond=None)[0]
-    print(p[0]) # Debug
+    p = np.array(np.linalg.lstsq(X, img.flatten(order='F'), rcond=None)[0])
+    print('p=')
+    print(p) # Debug
 
     # np.reshape()
     #
-    print('last') # Debug
+    print('im(:)=')
     print(img.flatten(order='F')) # Debug
+    print('X*p=')
     print(np.dot(X, p)) # Debug
 
-    res = np.subtract(img.flatten(order='F'), np.dot(X, p))
-    flattened = np.reshape(res, np.array([rows_no, cols_no]))
-    bg = np.reshape(np.dot(X, p), (rows_no, cols_no))
 
-    print(img) # Debug
+    res = img.flatten(order='F') - np.dot(X, p)
+    print("im(:)-X*p=")
+    print(res)
+    flattened = np.reshape(res, np.array([rows_no, cols_no]), order='F')
+    print("flattened result =")
+    print(flattened) # Debug
+
+    print('bg =')
+    bg = np.reshape(np.dot(X, p), (rows_no, cols_no), order='F')
+
     print(bg) # Debug
 
     if debug:
@@ -149,7 +159,10 @@ def resize_img(img, img_scale):
 
     return img
 
+def im2double(im):
+    info = np.iinfo(im.dtype) # Get the data type of the input image
+    return im.astype(np.float) / info.max # Divide all values by the largest possible value in the datatype
 
 if __name__ == "__main__":
-    img = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
+    img = np.array([[1, 1, 0], [0, 1, 0], [0, 0, 0]])
     bg_removal(img, True)
