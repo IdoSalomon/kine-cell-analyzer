@@ -198,9 +198,24 @@ def somb(mat):
     return smb
 
 
-def phase_seg(basis, img, optparams, debug = False):
-    print("CALLED PHASE_SEG")
-    return img
+def phase_seg(basis, img, opt_params, debug = False):
+    # Initialize
+    w_smooth_spatio = opt_params.smooth_weight
+    w_sparsity = opt_params.spars_weight
+    epsilon = opt_params.epsilon
+    gamma = opt_params.gamma
+    m_scale = opt_params.img_scale
+    maxiter = opt_params.max_itr
+    tol = opt_params.opt_tolr
+
+    # Create kernel
+    (nrows, ncols) = img.shape
+    N = nrows * ncols
+    H = basis
+    H = H.dot(H.conj())
+
+    # Calculate spatial smoothness term
+
 
 
 def calc_basis(kernel, rows, cols):
