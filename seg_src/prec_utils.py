@@ -1,11 +1,10 @@
 import scipy
 
-import prec_params as param
 import img_utils as imtil
 import debug_utils as dbg
 import numpy as np
-import scipy as sci
-import math
+from scipy import sparse
+
 from scipy import special
 
 
@@ -221,6 +220,13 @@ def phase_seg(basis, img, opt_params, debug = False):
 
 
 def calc_basis(kernel, nrows, ncols):
+    '''
+
+    :param kernel:
+    :param nrows:
+    :param ncols:
+    :return:
+    '''
 
     diameter = np.size(kernel, 1)
     radius = round((diameter - 1) / 2.0)
@@ -235,15 +241,22 @@ def calc_basis(kernel, nrows, ncols):
 
     inds_pad = np.pad(inds, np.array([radius, radius]), mode='symmetric')
 
-    rows_inds = np.tile(np.arange(1, N+1), (sum(logic_arr), 1))
+    row_inds = np.tile(np.arange(1, N+1), (sum(logic_arr), 1))
+    row_inds = row_inds.flatten(order='F')
     col_inds = im2col_sliding_strided(inds_pad.T, (diameter, diameter))
-    print(col_inds)
 
-    logic_arr = logic_arr[:, None]
-    col_inds = np.tile(logic_arr, (1,N))
+    logic_arr_col = logic_arr[:, None]
+    filter_mat = np.tile(logic_arr_col, (1,N))
+    col_inds = np.array([col_inds[i,j] for j in range(np.size(filter_mat, 1))
+                                       for i in range(np.size(filter_mat, 0))
+                                       if filter_mat[i,j] == 1])
+    row_inds -= 1
+    col_inds -= 1
+    vals = np.tile(kernel[np.nonzero(logic_arr)], (1, N)).flatten()
+    basis = sparse.csr_matrix((vals, (row_inds, col_inds)), shape=(N,N))
 
-    print(col_inds)
-    print("CALLED CALC_BASIS")
+    return basis
+
 
 def im2col_sliding_strided(A, BSZ, stepsize=1):
     # Parameters
