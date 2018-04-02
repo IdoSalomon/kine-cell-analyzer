@@ -147,7 +147,7 @@ def resize_img(img, img_scale):
         img_resize = np.array(img_resize) # convert image to ndarray
         return img_resize
 
-    return img_resize
+    return img
 
 
 if __name__ == "__main__":
