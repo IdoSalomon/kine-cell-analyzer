@@ -58,12 +58,63 @@ def get_kernel(ker_params, angle, debug=False):
     return ker
 
 
+def validate_params(ker_params, opt_params):
+    """ Validates input parameters """
+    return validate_ker_params(ker_params) and validate_opt_params(opt_params)
+
+
 def validate_ker_params(ker_params):
-    print("todo")
+    """ Validates kernel parameters """
+
+    valid = True
+    if ker_params.ring_rad <= 0:
+        print("Error! Phase ring radius (kernel parameter) must be greater than zero")
+        valid = False
+    if ker_params.ring_wid <= 0:
+        print("Error! Phase ring width (kernel parameter) must be greater than zero")
+        valid = False
+    if ker_params.ker_rad <= 0:
+        print("Error! Kernel radius (kernel parameter) must be greater than zero")
+        valid = False
+    if ker_params.zetap <= 0:
+        print("Error! Zetap (kernel parameter) must be greater than zero")
+        valid = False
+    if ker_params.dict_size <= 0:
+        print("Error! Dictionary size (kernel parameter) must be greater than zero")
+        valid = False
+
+    return valid
 
 
 def validate_opt_params(opt_params):
-    print("todo")
+    """ Validates optimization parameters """
+    valid = True
+    if opt_params.smooth_weight <= 0:
+        print("Error! Spatial smoothness weight (optimization parameter) must be greater than zero")
+        valid = False
+    if opt_params.spars_weight <= 0:
+        print("Error! Sparsity term weight (optimization parameter) must be greater than zero")
+        valid = False
+    if opt_params.sel_basis <= 0:
+        print("Error! Max selected basis (optimization parameter) must be greater than zero")
+        valid = False
+    if opt_params.epsilon <= 0:
+        print("Error! Epsilon (optimization parameter) must be greater than zero")
+        valid = False
+    if opt_params.gamma <= 0:
+        print("Error! Gamma (optimization parameter) must be greater than zero")
+        valid = False
+    if opt_params.img_scale <= 0:
+        print("Error! Image scaling factor (optimization parameter) must be greater than zero")
+        valid = False
+    if opt_params.max_itr <= 0:
+        print("Error! Max iterations (optimization parameter) must be greater than zero")
+        valid = False
+    if opt_params.opt_tolr <= 0:
+        print("Error! Optimization tolerance (optimization parameter) must be greater than zero")
+        valid = False
+
+    return valid
 
 
 def basis_select(img, ker_params, M, debug = False):
