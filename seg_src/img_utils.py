@@ -78,6 +78,8 @@ def bg_removal(img, debug=False):
     return flattened
 
 
+    return flattened
+
 def normalize(img):
     """
     Normalize the image elements to [0, 1]
