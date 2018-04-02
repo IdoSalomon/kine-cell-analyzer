@@ -1,3 +1,5 @@
+import sys
+
 import prec_utils
 import img_utils
 import numpy as np
@@ -27,7 +29,12 @@ def prec_sparse(img, opt_params, ker_params, debug):
         2D array of preconditioned image
     """
 
-    # Initialize image
+    # Validate args
+    if prec_utils.validate_params(ker_params, opt_params) == False:
+        print("Invalid arguments. Exiting...")
+        sys.exit()
+
+    # Resize image if required
     if opt_params.img_scale != 1:
         img = img_utils.resize_img(img, opt_params.img_scale)
 

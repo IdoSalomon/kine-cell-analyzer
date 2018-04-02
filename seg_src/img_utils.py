@@ -4,6 +4,25 @@ import cv2
 import matplotlib.image as mpimg
 import debug_utils as dbg
 
+def load_img(path, gray=True):
+    """
+
+    Loads normalized image
+
+    Parameters
+    ----------
+    path : str
+        image path
+    gray : bool
+        load as grayscale
+
+    Returns
+    -------
+    img : ndarray
+        2D array of normalized image
+    """
+    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    return im2double(img)
 
 def bg_removal(img, debug=False):
     """
