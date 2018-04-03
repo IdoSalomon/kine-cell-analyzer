@@ -7,6 +7,8 @@ import numpy as np
 from scipy import sparse
 import math
 from scipy import special
+from matplotlib import pyplot as plt
+from prec_params import KerParams
 
 
 def get_kernel(ker_params, angle, debug=False):
@@ -156,17 +158,19 @@ def basis_select(img, ker_params, M, debug = False):
         basis = calc_basis(kernel, rows_no, cols_no)
 
         res_feature = basis.dot(img.flatten(order='F'))
-        res_feature = np.reshape(res_feature, (rows_no, cols_no))
+        res_feature = np.reshape(res_feature, (rows_no, cols_no), order='F')
 
         # nullify negative elements
-        res_feature[res_feature < 3] = 0
+        res_feature[res_feature < 0] = 0
 
         res_feature_flat = res_feature.flatten(order='F')
 
-        innerNorm[m] = np.linalg.norm(res_feature_flat)
+        innerNorm[m-1] = np.linalg.norm(res_feature_flat)
 
         if debug:
-            imgs += [(imtil.normalize(res_feature), 'Inner Production of basis with phase retardation' + str(m) + 'times 2*pi' )]
+            imgs += [(imtil.normalize(res_feature), 'Inner Production ' + str(m))]
+            print("saving images")
+            # plt.imsave('dbg/' + str(m) + 'resFeature.png',imtil.normalize(res_feature), cmap=plt.cm.gray)
 
     if debug:
         dbg.save_debug_fig(imgs, 'basis_select.png')
@@ -345,5 +349,12 @@ def im2col_sliding_strided(A, BSZ, stepsize=1):
 
 
 if __name__ == "__main__":
-    kernel = np.array([[2,1,0], [0, 1, 0], [0, 0, 1]])
-    calc_basis(kernel, 3, 3)
+    # calc_basis test
+    # kernel = np.array([[2,1,0], [0, 1, 0], [0, 0, 1]])
+    # calc_basis(kernel, 3, 3)
+
+    # basis_select_test
+    img = imtil.load_img('images/small.png')
+    ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
+    basis_select(img, ker_params, 20, True)
+
