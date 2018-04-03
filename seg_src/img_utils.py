@@ -147,7 +147,7 @@ def resize_img(img, img_scale):
         return img_resize
     if img_scale > 1:
         # Enlarge image
-        img_resize=cv2.resize(img, (img_dim[1] * img_scale, img_dim[0] * img_scale), interpolation=cv2.INTER_CUBIC) # Expects opencv compatible array
+        img_resize=cv2.resize(img, (round(img_dim[1] * img_scale), round(img_dim[0] * img_scale)), interpolation=cv2.INTER_CUBIC) # Expects opencv compatible array
         #img_resize = np.array(img_resize) # convert image to ndarray
         return img_resize
 
