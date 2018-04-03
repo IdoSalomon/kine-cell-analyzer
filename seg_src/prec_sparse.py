@@ -59,7 +59,7 @@ def prec_sparse(img, opt_params, ker_params, debug):
 
         # Get kernel for basis
         print("{}th basis generation\n", sel_ind)
-        kernel = prec_utils.get_kernel(ker_params, sel_basis[sel_ind] / (2 * dict_size * np.math.pi), 0)
+        kernel = prec_utils.get_kernel(ker_params, ((sel_basis[sel_ind] + 1) / dict_size) * 2 * np.math.pi, 0)
 
         # Calculate basis for kernel
         basis = prec_utils.calc_basis(kernel, img_dim[0], img_dim[1])
