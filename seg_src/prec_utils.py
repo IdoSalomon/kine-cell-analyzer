@@ -288,7 +288,7 @@ def phase_seg(basis, img, opt_params, debug=False):
 
     # Deconvolution Items
     A = HH + w_smooth_spatio * L
-    btmp = img_phase.flatten().dot(-H.conj().T)
+    btmp = (-H.conj().T).dot(img_phase.flatten())
     Ap = (np.abs(A) + A) / 2 # positive elements of A
     An = (np.abs(A) - A) / 2 # negative elements of A
     f = prior_f.flatten()
@@ -303,13 +303,13 @@ def phase_seg(basis, img, opt_params, debug=False):
         tmp = Ap * f
         newf = 0.5 * f * (-b + np.sqrt(b ** 2 + 4 * tmp * (An * f))) / (tmp + np.spacing(1))
         W = W0 / (newf + gamma)
-        err[iter] = np.sum(abs(f - newf))
+        err[iter] = np.sum(np.abs(f - newf))
 
         if err[iter] < epsilon:
             break
         f = newf
 
-    return np.reshape(f, nrows, ncols, order='F')
+    return np.reshape(f, (nrows, ncols), order='F')
 
 
 def calc_basis(kernel, nrows, ncols):
