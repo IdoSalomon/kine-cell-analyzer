@@ -1,10 +1,13 @@
 import sys
 
+import scipy
+
 import prec_utils
 import img_utils
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from scipy import misc
 
 from debug_utils import save_debug_fig
 
@@ -58,7 +61,7 @@ def prec_sparse(img, opt_params, ker_params, debug):
         sel_basis[sel_ind] = prec_utils.basis_select(rimg, ker_params, dict_size, debug)
 
         # Get kernel for basis
-        print("{}th basis generation\n", sel_ind)
+        print("%d basis generation\n", sel_ind)
         kernel = prec_utils.get_kernel(ker_params, ((sel_basis[sel_ind] + 1) / dict_size) * 2 * np.math.pi, 0)
 
         # Calculate basis for kernel
@@ -70,22 +73,28 @@ def prec_sparse(img, opt_params, ker_params, debug):
 
         # Update residual error
         print("Residual error update\n")
-        basis_copy = np.copy(basis)
-        rimg = rimg - np.reshape(basis_copy.dot(resd_img[(1 + (sel_ind - 1) * rimg.size) : (sel_ind * rimg.size)].conj().T), (img_dim[0], img_dim[1]), order='F')
-        #rimg = rimg - np.reshape(np.dot(np.asarray(basis_copy), resd_img[(1 + (sel_ind - 1) * rimg.size) : (sel_ind * rimg.size)].conj().T), (img_dim[0], img_dim[1]), order='F')
+        rimg = rimg - np.reshape(basis.dot(resd_img[:,:,sel_ind].flatten('F').conj().T), (img_dim[0], img_dim[1]), order='F')
 
         # Normalize
         img_proc[:, :, sel_ind] = img_utils.normalize(resd_img[:, :, sel_ind])
+        img_copy = np.copy(img_proc)
 
         if debug:
             # Display residual and restored images
             imgs = [(rimg, 'Residual image:'), (img_proc, 'Restored image:')]
             save_debug_fig(imgs, 'prec_sparse.png')
+            # Save channel image
+            rgb = cv2.normalize(img_copy[:, :, sel_ind], None, 0, 255, cv2.NORM_MINMAX)
+            cv2.imwrite("dbg\\restored_image_" + str(sel_ind) + ".png", rgb)
 
-        if np.norm(resd_img[:, :, sel_ind]) / np.norm(resd_img[:, :, 1]) < 0.01:
+        if np.linalg.norm(resd_img[:, :, sel_ind]) / np.linalg.norm(resd_img[:, :, 1]) < 0.01:
             break
 
-    ndep = np.size(img_proc, 3)
-    img_proc[:, :, ndep + 1: num_basis] = 0
+    ndep = img_proc.shape[2]
+    img_proc[:, :, ndep: num_basis] = 0
+
+    # Save final BGR image
+    bgr = cv2.normalize(img_proc, None, 0, 255, cv2.NORM_MINMAX)
+    cv2.imwrite("dbg\\restored_image.png", bgr)
 
     return img_proc
