@@ -277,11 +277,11 @@ def phase_seg(basis, img, opt_params, debug=False):
     mag[mag < minmag] = minmag.flatten()
     img_phase[img_phase > maxim] = maxim.flatten()
     img_phase[img_phase < minim] = minim.flatten()
-    iIm = (np.round(nImBin * (img_phase.flatten() - minim.flatten()) / (maxim.flatten() - minim.flatten())) + 1).reshape(-1,1).astype(int)
-    iMag = (np.round(nMagBin * (mag.flatten() - minmag.flatten()) / (maxmag.flatten() - minmag.flatten())) + 1).reshape(-1,1).astype(int)
+    iIm = (np.round(nImBin * (img_phase.flatten('F') - minim.flatten('F')) / (maxim.flatten('F') - minim.flatten('F'))) + 1).reshape(-1,1).astype(int)
+    iMag = (np.round(nMagBin * (mag.flatten('F') - minmag.flatten('F')) / (maxmag.flatten('F') - minmag.flatten('F'))) + 1).reshape(-1,1).astype(int)
 
     # Look up the prior
-    prior_f = np.reshape(prior.flatten('F')[(iMag - 1) * (nImBin + 1) + iIm],(nrows, ncols), order='F')
+    prior_f = np.reshape(prior.flatten('F')[(iMag - 1) * (nImBin + 1) + iIm - 1],(nrows, ncols), order='F')
     prior_f[prior_f <= 0] = 0.00001 # avoid nonpositive initial point
 
     # Deconvolution Items
