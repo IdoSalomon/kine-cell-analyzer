@@ -7,6 +7,8 @@ import numpy as np
 from scipy import sparse
 import math
 from scipy import special
+from scipy import io
+from scipy import ndimage
 from matplotlib import pyplot as plt
 from prec_params import KerParams
 
@@ -240,7 +242,7 @@ def phase_seg(basis, img, opt_params, debug=False):
     # Get prior
     sigma = 2.5
     GaussHwd = 8
-    x = np.arange(-GaussHwd, GaussHwd +1 )
+    x = np.arange(-GaussHwd, GaussHwd + 1)
     GAUSS = np.exp((-0.5 * x ** 2) / (sigma ** 2))
     GAUSS = GAUSS / GAUSS.sum(axis=0)
     dGAUSS = -x * GAUSS / sigma ** 2
@@ -266,8 +268,8 @@ def phase_seg(basis, img, opt_params, debug=False):
     minf = immag_data['minf']
     prior = prior_data['prior']
 
-    dx = scipy.ndimage.correlate(img_phase, kernelx, mode='constant').transpose()  # x direction
-    dy = scipy.ndimage.correlate(img_phase, kernely, mode='constant').transpose()  # y direction
+    dx = scipy.ndimage.correlate(img_phase, kernelx, mode='constant')  # x direction
+    dy = scipy.ndimage.correlate(img_phase, kernely, mode='constant')  # y direction
     mag = np.sqrt(dx ** 2 + dy ** 2)
 
     # Get bin index
