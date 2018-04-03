@@ -70,7 +70,9 @@ def prec_sparse(img, opt_params, ker_params, debug):
 
         # Update residual error
         print("Residual error update\n")
-        rimg = rimg - np.reshape(basis * resd_img[(1 + (sel_ind - 1) * rimg.size()) : (sel_ind * rimg.size())].getH(),img_dim[0], img_dim[1])
+        basis_copy = np.copy(basis)
+        rimg = rimg - np.reshape(basis_copy.dot(resd_img[(1 + (sel_ind - 1) * rimg.size) : (sel_ind * rimg.size)].conj().T), (img_dim[0], img_dim[1]), order='F')
+        #rimg = rimg - np.reshape(np.dot(np.asarray(basis_copy), resd_img[(1 + (sel_ind - 1) * rimg.size) : (sel_ind * rimg.size)].conj().T), (img_dim[0], img_dim[1]), order='F')
 
         # Normalize
         img_proc[:, :, sel_ind] = img_utils.normalize(resd_img[:, :, sel_ind])
