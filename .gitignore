@@ -2,4 +2,5 @@
 .idea
 apply-gitignore = !git ls-files -ci --exclude-standard -z | xargs -0 git rm --cached
 dbg
+*.pyc
 __pycache__
