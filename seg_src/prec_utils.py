@@ -154,7 +154,7 @@ def basis_select(img, ker_params, M, debug = False):
 
     innerNorm = np.empty(M)
     imgs = []
-    for m in range(1, M):
+    for m in range(1, M + 1):
         angle = 2 * np.pi / M * m
         kernel = get_kernel(ker_params, angle, debug)
         basis = calc_basis(kernel, rows_no, cols_no)
@@ -221,7 +221,7 @@ def phase_seg(basis, img, opt_params, debug=False):
     (nrows, ncols) = img.shape
     N = nrows * ncols
     H = basis
-    HH = (H.conj()).dot(H)
+    HH = (H.conj().T).dot(H)
 
     # Calculate spatial smoothness term
     inds = np.reshape(np.arange(0, N), (nrows, ncols), order='F') # inds = (xx - 1) * nrows + yy;
@@ -283,6 +283,8 @@ def phase_seg(basis, img, opt_params, debug=False):
     # Look up the prior
     prior_f = np.reshape(prior.flatten('F')[(iMag - 1) * (nImBin + 1) + iIm - 1],(nrows, ncols), order='F')
     prior_f[prior_f <= 0] = 0.00001 # avoid nonpositive initial point
+
+    #TODO add debug images of prior_f
 
     # Deconvolution Items
     A = HH + w_smooth_spatio * L
