@@ -10,7 +10,7 @@ from scipy import special
 from matplotlib import pyplot as plt
 from prec_params import KerParams
 
-
+# TODO save kernels so only need to calculate once
 def get_kernel(ker_params, angle, debug=False):
     """
 
@@ -206,7 +206,7 @@ def somb(mat):
 
 def phase_seg(basis, img, opt_params, debug=False):
     # Initialize
-    img_phase = img.copy
+    img_phase = np.copy(img)
     w_smooth_spatio = opt_params.smooth_weight
     w_sparsity = opt_params.spars_weight
     epsilon = opt_params.epsilon
@@ -224,6 +224,16 @@ def phase_seg(basis, img, opt_params, debug=False):
     # Calculate spatial smoothness term
     # TODO
     inds = np.reshape(np.arange(0, N), (nrows, ncols), order='F') # inds = (xx - 1) * nrows + yy;
+    HorVerLinks = np.concatenate((np.transpose([inds[:, 0 : ncols - 1].flatten('F'), inds[:, 1: ncols].flatten('F')]), np.transpose([inds[0 : nrows - 1, :].flatten('F'), inds[1: nrows, :].flatten('F')])))
+    DiagLinks = np.concatenate((np.transpose([inds[0 : nrows - 1, 0 : ncols - 1].flatten('F'), inds[1 : nrows, 1: ncols].flatten('F')]), np.transpose([inds[0 : nrows - 1, 1 : ncols - 0].flatten('F'), inds[1 : nrows, 0: ncols - 1].flatten('F')])))
+    HorVerlinkpot = (img_phase.flatten('F')[HorVerLinks[:, 0]] - img_phase.flatten('F')[HorVerLinks[:, 1]]) ** 2 # grayscale image
+    HorVerlinkpot = (epsilon + np.exp(-HorVerlinkpot / np.mean(HorVerlinkpot))) / (epsilon+1)
+    Diaglinkpot = (img_phase.flatten('F')[DiagLinks[:,0]] - img_phase.flatten('F')[DiagLinks[:,1]]) ** 2 # grayscale image
+    Diaglinkpot = 0.707 * (epsilon + np.exp(-Diaglinkpot / np.mean(Diaglinkpot))) / (epsilon + 1)
+
+    W = sparse.csr_matrix([np.concatenate((HorVerLinks[:, 0], HorVerLinks[:, 1], DiagLinks[:, 0], DiagLinks[:, 1]))], (np.concatenate(([HorVerLinks[:, 1], HorVerLinks[:, 0], DiagLinks[:, 1], DiagLinks[:, 0]])), [np.concatenate((HorVerlinkpot, HorVerlinkpot, Diaglinkpot, Diaglinkpot))]), shape=(N, N))
+
+
 
     # Get prior
     sigma = 2.5
@@ -326,7 +336,7 @@ def calc_basis(kernel, nrows, ncols):
     filter_mat = np.tile(logic_arr_col, (1,N))
     col_inds = np.array([col_inds[i,j] for j in range(np.size(filter_mat, 1))
                                        for i in range(np.size(filter_mat, 0))
-                                       if filter_mat[i,j] == 1])
+                                       if filter_mat[i,j] == 1]) # TODO this kills performance
     row_inds -= 1
     col_inds -= 1
     vals = np.tile(kernel[np.nonzero(logic_arr)], (1, N)).flatten()
