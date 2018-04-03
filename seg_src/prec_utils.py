@@ -289,10 +289,10 @@ def phase_seg(basis, img, opt_params, debug=False):
 
     # Deconvolution Items
     A = HH + w_smooth_spatio * L
-    btmp = (-H.conj().T).dot(img_phase.flatten())
+    btmp = (-Hcopy.conj().T).dot(img_phase.flatten('F')).reshape(-1,1)
     Ap = (np.abs(A) + A) / 2 # positive elements of A
     An = (np.abs(A) - A) / 2 # negative elements of A
-    f = prior_f.flatten()
+    f = prior_f.flatten('F').reshape(-1,1)
     f[f == 0] = 0.000001
     W0 = np.ones((N, 1))
     W = W0
