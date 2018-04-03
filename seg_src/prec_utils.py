@@ -221,7 +221,8 @@ def phase_seg(basis, img, opt_params, debug=False):
     (nrows, ncols) = img.shape
     N = nrows * ncols
     H = basis
-    HH = (H.conj().T).dot(H)
+    Hcopy = sparse.csr_matrix(H)
+    HH = (H.conj().T).dot(Hcopy)
 
     # Calculate spatial smoothness term
     inds = np.reshape(np.arange(0, N), (nrows, ncols), order='F') # inds = (xx - 1) * nrows + yy;
