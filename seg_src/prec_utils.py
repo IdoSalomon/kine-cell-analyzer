@@ -219,7 +219,7 @@ def phase_seg(basis, img, opt_params, debug=False):
     (nrows, ncols) = img.shape
     N = nrows * ncols
     H = basis
-    H = H.dot(H.conj())
+    HH = (H.conj()).dot(H)
 
     # Calculate spatial smoothness term
     # TODO
@@ -238,11 +238,16 @@ def phase_seg(basis, img, opt_params, debug=False):
     # Get prior
     sigma = 2.5
     GaussHwd = 8
-    x = np.arange(-GaussHwd, GaussHwd) # FIXME check range
-    GAUSS = np.math.exp(-0.5 * x ** 2 / np.math.pow(sigma, 2)) # FIXME nominator not a scalar
-    GAUSS = GAUSS / GAUSS.sum(axis=0) # FIXME find equivalent
-    dGAUSS = -x * GAUSS / np.math.pow(sigma, 2)
-    kernelx = dGAUSS.dot(GAUSS.conj().T)
+    x = np.arange(-GaussHwd, GaussHwd +1 )
+    GAUSS = np.exp((-0.5 * x ** 2) / (sigma ** 2))
+    GAUSS = GAUSS / GAUSS.sum(axis=0)
+    dGAUSS = -x * GAUSS / sigma ** 2
+
+    #add a second dim. before dot prod.
+    GAUSS = GAUSS[:, None] #column vector
+    dGAUSS = dGAUSS[None,:] #row vector
+
+    kernelx = (GAUSS.conj()).dot(dGAUSS)
     kernely = kernelx.conj().T;
     nImBin = 31
     nMagBin = 31
@@ -367,4 +372,5 @@ if __name__ == "__main__":
     img = imtil.load_img('images/small.png')
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
     basis_select(img, ker_params, 20, True)
+
 
