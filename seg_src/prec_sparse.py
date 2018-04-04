@@ -81,13 +81,13 @@ def prec_sparse(img, opt_params, ker_params, debug):
 
         if debug:
             # Display residual and restored images
-            imgs = [(rimg, 'Residual image:'), (img_proc, 'Restored image:')]
+            imgs = [(rimg, 'Residual image:'), (img_proc[:, :, sel_ind], 'Restored image:')]
             save_debug_fig(imgs, 'prec_sparse.png')
             # Save channel image
             rgb = cv2.normalize(img_copy[:, :, sel_ind], None, 0, 255, cv2.NORM_MINMAX)
             cv2.imwrite("dbg\\restored_image_" + str(sel_ind) + ".png", rgb)
 
-        if np.linalg.norm(resd_img[:, :, sel_ind]) / np.linalg.norm(resd_img[:, :, 1]) < 0.01:
+        if np.linalg.norm(resd_img[:, :, sel_ind]) / np.linalg.norm(resd_img[:, :, 0]) < 0.01:
             break
 
     ndep = img_proc.shape[2]
