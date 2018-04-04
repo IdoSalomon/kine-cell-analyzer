@@ -56,11 +56,6 @@ def get_kernel(ker_params, angle, debug=False):
     # normalize kernel
     ker = ker / np.linalg.norm(ker, 2)
 
-    if debug:
-        # Display kernel
-        imgs = [(ker, 'Kernel:')]
-        dbg.save_debug_fig(imgs, 'ker.png')
-
     return ker
 
 
@@ -154,6 +149,7 @@ def basis_select(img, ker_params, M, debug = False):
 
     innerNorm = np.empty(M)
     imgs = []
+    kerImgs = []
     for m in range(1, M + 1):
         angle = 2 * np.pi / M * m
         kernel = get_kernel(ker_params, angle, debug)
@@ -171,11 +167,13 @@ def basis_select(img, ker_params, M, debug = False):
 
         if debug:
             imgs += [(imtil.normalize(res_feature), 'Inner Production ' + str(m))]
+            kerImgs += [(kernel, 'Kernel No.' + str(m))]
             print("saving images")
             # plt.imsave('dbg/' + str(m) + 'resFeature.png',imtil.normalize(res_feature), cmap=plt.cm.gray)
 
     if debug:
         dbg.save_debug_fig(imgs, 'basis_select.png')
+        dbg.save_debug_fig(kerImgs, 'kernels.png')
 
     return innerNorm.argmax()
 
@@ -346,9 +344,8 @@ def calc_basis(kernel, nrows, ncols):
 
     logic_arr_col = logic_arr[:, None]
     filter_mat = np.tile(logic_arr_col, (1,N))
-    col_inds = np.array([col_inds[i,j] for j in range(np.size(filter_mat, 1))
-                                       for i in range(np.size(filter_mat, 0))
-                                       if filter_mat[i,j] == 1]) # TODO this kills performance
+    col_inds = col_inds.flatten('F')[np.flatnonzero(filter_mat)]
+
     row_inds -= 1
     col_inds -= 1
     vals = np.tile(kernel[np.nonzero(logic_arr)], (1, N)).flatten()
@@ -372,11 +369,7 @@ def im2col_sliding_strided(A, BSZ, stepsize=1):
 
 if __name__ == "__main__":
     # calc_basis test
-    # kernel = np.array([[2,1,0], [0, 1, 0], [0, 0, 1]])
-    # calc_basis(kernel, 3, 3)
+    kernel = np.array([[2,1,0], [0, 1, 0], [0, 0, 1]])
+    calc_basis(kernel, 3, 3)
 
     # basis_select_test
-    img = imtil.load_img('images/small.png')
-    ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
-    basis_select(img, ker_params, 20, True)
-
