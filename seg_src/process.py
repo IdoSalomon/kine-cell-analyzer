@@ -17,7 +17,7 @@ def generate_mask(raw_threshold, orig_img, debug=True):
     kernel = np.ones((3, 3), np.uint8)
 
     # step 1 - threshold
-    tmp, threshold = cv.threshold(raw_threshold, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+    tmp, threshold = cv.threshold(raw_threshold, 0, 255, cv.THRESH_BINARY)
 
     if debug:
         dbgImgs += [(threshold, 'step 1 - threshold')]
