@@ -37,10 +37,6 @@ def prec_sparse(img, opt_params, ker_params, debug):
         print("Invalid arguments. Exiting...")
         sys.exit()
 
-    # Resize image if required
-    if opt_params.img_scale != 1:
-        img = img_utils.resize_img(img, opt_params.img_scale)
-
     # Remove image background
     print("Removing background\n")
     img = img_utils.bg_removal(img, debug)
@@ -98,3 +94,4 @@ def prec_sparse(img, opt_params, ker_params, debug):
     cv2.imwrite("dbg\\restored_image.png", bgr)
 
     return img_proc
+

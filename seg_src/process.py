@@ -18,32 +18,34 @@ def generate_mask(raw_threshold, orig_img, debug=True):
 
     # step 1 - threshold
     tmp, threshold = cv2.threshold(raw_threshold, 0, 255, cv2.THRESH_BINARY)
-
     if debug:
         dbgImgs += [(threshold, 'step 1 - threshold')]
 
     # step 2 - dialate
     dialated = cv2.dilate(threshold,kernel,iterations = 1)
-
     if debug:
         dbgImgs += [(dialated, 'step 2 - dialate')]
 
-    # step 3 - borders
-    borders = cv2.Canny(dialated,100,200)
+    # step 3 - filter far/dead cells
+    filtered = filter_far_cells(dialated, debug)
+    if debug:
+        dbgImgs += [(filtered, 'step 3 - filter')]
 
+    # step 4 - borders
+    borders = cv2.Canny(filtered, 100, 200)
     if debug:
         dbgImgs += [(borders, 'step 4 - borders')]
 
-    # step 4 - borders
+    # step 5 - compare with original
     compare = np.copy(orig_img)
     compare[np.nonzero(borders == 255)] = 255
-
     if debug:
-        dbgImgs += [(compare, 'step 4 - compare')]
+        dbgImgs += [(compare, 'step 5 - compare')]
         dbgImgs += [(orig_img, 'original image')]
-
-    if debug:
         dbg.save_debug_fig(dbgImgs, 'generate_mask', zoom=5)
+
+    #step 6 - color components
+    colorConnectedComponents(filtered)
 
 
 def colorConnectedComponents(img):
@@ -66,3 +68,32 @@ def colorConnectedComponents(img):
 
     cv2.imshow('labeled.png', labeled_img)
     cv2.waitKey()
+
+def filter_far_cells(thresh, debug = True):
+
+    #list cells
+    connectivity = 4
+    con_comps = cv2.connectedComponentsWithStats(thresh, connectivity, cv2.CV_32S)
+    labels = con_comps[1]
+    stats = con_comps[2]
+
+    #iterate over components and store cells area
+    area = np.array([stats[i,cv2.CC_STAT_AREA] for i in range(1, len(stats))]) # TODO check why cell 0 area is large
+    mean = np.mean(area)
+    std = np.std(area)
+
+    small = [i for i in range(1, len(stats)) if stats[i, cv2.CC_STAT_AREA] < mean - std]
+    mask = np.zeros((len(labels), len(labels[0])))
+    for i in range(len(labels)):
+        for j in range(len(labels[0])):
+            if labels[i,j] in small:
+                mask[i, j] = 1
+
+    filtered = np.copy(thresh)
+
+    filtered[np.nonzero(mask == 1)] = 0
+
+    if debug:
+        print('filtering %d cells' % (len(small)))
+
+    return filtered

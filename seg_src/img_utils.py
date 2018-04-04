@@ -138,7 +138,7 @@ def resize_img(img, img_scale):
     img : ndarray
         2D array that represents image
 
-    img_scale : int
+    img_scale : float
         Scale factor
 
     Returns
