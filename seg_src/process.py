@@ -40,7 +40,7 @@ def generate_mask(raw_threshold, orig_img, debug=True):
 
     if debug:
         dbgImgs += [(compare, 'step 4 - compare')]
-
+        dbgImgs += [(orig_img, 'original image')]
 
     if debug:
         dbg.save_debug_fig(dbgImgs, 'generate_mask', zoom=5)
