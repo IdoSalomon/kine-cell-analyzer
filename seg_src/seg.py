@@ -4,6 +4,7 @@ import prec_sparse as ps
 import process as pr
 import img_utils as iu
 from prec_params import KerParams, OptParams
+import random
 
 
 def main():
@@ -14,6 +15,8 @@ def main():
     res_img = ps.prec_sparse(img, opt_params, ker_params, False)
     red_channel = res_img[:, :, 0 ]
     pr.generate_mask(red_channel, img)
+    #pr.colorConnectedComponents(pr.generate_mask(red_channel, img))
+
 
 if __name__== "__main__":
     main()

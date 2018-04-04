@@ -21,7 +21,12 @@ def load_img(path, gray=True):
     img : ndarray
         2D array of normalized image
     """
-    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+
+    if gray:
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    else:
+        img = cv2.imread(path)
+
     return im2double(img)
 
 def bg_removal(img, debug=False):
