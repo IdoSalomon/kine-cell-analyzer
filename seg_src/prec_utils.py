@@ -131,15 +131,15 @@ def basis_select(img, ker_params, M, debug = False):
     ker_params : KerParams
         kernal parameters
 
-    M : ndarray
-        TODO
+    M : int
+        size of dictionary
 
     debug : bool
         is in debug mode
 
     Returns
     -------
-        TODO
+        2D array that represents best basis
     """
 
     # get image dimensions
@@ -205,6 +205,25 @@ def somb(mat):
 
 
 def phase_seg(basis, img, opt_params, debug=False):
+    """
+
+    Restores segmented image
+
+    Parameters
+    ----------
+    basis : ndarray
+        2D array that represents basis
+    img : ndarray
+        2D array of image
+    opt_params : OptParams
+        optimization parameters
+    debug : bool
+        is in debug mode
+
+    Returns
+    -------
+        2D array of restored image
+    """
     # Initialize
     img_phase = np.copy(img)
     w_smooth_spatio = opt_params.smooth_weight
@@ -316,13 +335,16 @@ def calc_basis(kernel, nrows, ncols):
 
     Parameters
     ----------
-    kernel
-    nrows
-    ncols
+    kernel : ndarray
+        2D array of Kernel
+    nrows : int
+        number of rows
+    ncols : int
+        number of columns
 
     Returns
     -------
-
+        2D array that represents basis
     """
 
     diameter = np.size(kernel, 1)
@@ -355,6 +377,23 @@ def calc_basis(kernel, nrows, ncols):
 
 
 def im2col_sliding_strided(A, BSZ, stepsize=1):
+    """
+
+    Rearranges image blocks into columns (Python port of Matlab's im2col)
+
+    Parameters
+    ----------
+    A : ndarray
+        2D array that represents image
+    BSZ : ndarray
+        2D array where each column is a rearranged block of image
+    stepsize :
+        size of step
+
+    Returns
+    -------
+        2D array of rearranged image blocks
+    """
     # Parameters
     m,n = A.shape
     s0, s1 = A.strides

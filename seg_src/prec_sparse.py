@@ -61,14 +61,14 @@ def prec_sparse(img, opt_params, ker_params, debug):
         sel_basis[sel_ind] = prec_utils.basis_select(rimg, ker_params, dict_size, debug)
 
         # Get kernel for basis
-        print("%d basis generation\n", sel_ind)
+        print("{} basis generation\n".format(str(sel_ind)))
         kernel = prec_utils.get_kernel(ker_params, ((sel_basis[sel_ind] + 1) / dict_size) * 2 * np.math.pi, 0)
 
         # Calculate basis for kernel
         basis = prec_utils.calc_basis(kernel, img_dim[0], img_dim[1])
 
         # Calculate coefficient
-        print("Calculate coefficient of the {}th basis\n", sel_ind)
+        print("Calculate coefficient of the {}th basis\n".format(str(sel_ind)))
         resd_img[:,:, sel_ind] = np.reshape(prec_utils.phase_seg(basis, rimg, opt_params, debug), (img_dim[0], img_dim[1]), order='F')
 
         # Update residual error
