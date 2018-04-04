@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
-import prec_sparse as pr
+import prec_sparse as ps
+import process as pr
 import img_utils as iu
 from prec_params import KerParams, OptParams
 
@@ -10,7 +11,9 @@ def main():
     opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=1, max_itr=100, opt_tolr=np.finfo(float).eps)
     img = iu.load_img("images\\small.png", True)
 
-    pr.prec_sparse(img, opt_params, ker_params, False)
+    res_img = ps.prec_sparse(img, opt_params, ker_params, False)
+    red_channel = res_img[:, :, 0 ]
+    pr.generate_mask(red_channel, img)
 
 if __name__== "__main__":
     main()
