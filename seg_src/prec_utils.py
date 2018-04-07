@@ -366,7 +366,12 @@ def calc_basis(kernel, nrows, ncols):
 
     logic_arr_col = logic_arr[:, None]
     filter_mat = np.tile(logic_arr_col, (1,N))
+
     col_inds = col_inds.flatten('F')[np.flatnonzero(filter_mat)]
+
+    """col_inds = np.array([col_inds[i, j] for j in range(np.size(filter_mat, 1))
+                         for i in range(np.size(filter_mat, 0))
+                         if filter_mat[i, j] == 1])  # TODO this kills performance"""
 
     row_inds -= 1
     col_inds -= 1

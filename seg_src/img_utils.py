@@ -4,7 +4,7 @@ import cv2
 import matplotlib.image as mpimg
 import debug_utils as dbg
 
-def load_img(path, gray=True):
+def load_img(path, resize_factor, gray=True, eight_bit=True):
     """
 
     Loads normalized image
@@ -13,6 +13,8 @@ def load_img(path, gray=True):
     ----------
     path : str
         image path
+    resize_factor : double
+        image resize factor
     gray : bool
         load as grayscale
 
@@ -22,10 +24,20 @@ def load_img(path, gray=True):
         2D array of normalized image
     """
 
-    if gray:
-        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    img = cv2.normalize(cv2.imread(path, cv2.IMREAD_ANYDEPTH), None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX).astype(np.uint8)
+    """if gray:
+        img = cv2.imread(path, cv2.IMREAD_ANYDEPTH).astype(np.uint8)
+    elif not eight_bit:
+        img = cv2.imread(path, cv2.IMREAD_ANYDEPTH)
+        img = img / 1100
     else:
-        img = cv2.imread(path)
+        img = cv2.imread(path)"""
+
+    if resize_factor != 1:
+        img = resize_img(img, resize_factor)
+
+    """if not eight_bit:
+        return img"""
 
     return im2double(img)
 
