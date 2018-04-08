@@ -7,7 +7,7 @@ import img_utils as iu
 from prec_params import KerParams, OptParams
 
 
-def gen_phase_mask(restored, orig_img, despeckle_size=1, filter_size=1, file_name="gen_phase_mask", debug=True):
+def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=True):
     dbgImgs = []
     if debug:
         dbgImgs += [(restored, 'initial')]
@@ -59,20 +59,23 @@ def gen_phase_mask(restored, orig_img, despeckle_size=1, filter_size=1, file_nam
         dbg.save_debug_fig(dbgImgs, file_name, zoom=5)
 
 
-def colorConnectedComponents(img):
+def colorConnectedComponents(img, grayscale=True, debug=True):
     img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
     img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY)[1]  # ensure binary
     img = np.uint8(img)
 
     ret, labels = cv2.connectedComponents(img, connectivity=4)
 
-    # Map component labels to hue val
-    label_hue = np.uint8(179 * labels / np.max(labels))
-    blank_ch = 255 * np.ones_like(label_hue)
-    labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
+    if grayscale:
+        return labels
+    else:
+        # Map component labels to hue val
+        label_hue = np.uint8(179 * labels / np.max(labels))
+        blank_ch = 255 * np.ones_like(label_hue)
+        labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
 
-    # cvt to BGR for display
-    labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
+        # cvt to BGR for display
+        labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
 
     # set bg label to black
     labeled_img[label_hue == 0] = 0
@@ -120,7 +123,7 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
     std = np.std(area)
 
     if filter_size == 0:
-        filter_size = mean - 1.1 * std
+        filter_size = mean - 1.5 * std
 
     # Remove background
     sizes = stats[1:, -1]
@@ -136,7 +139,7 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
             filtered[output == i + 1] = 255
 
     if debug:
-        print('filtered {} out of X segmented particles. X cells remain.'.format(filtered_components, init_components, init_components - filtered_components))
+        print('filtered {} out of {} segmented particles. {} cells remain.'.format(filtered_components, init_components, init_components - filtered_components))
 
     return filtered
 
@@ -234,5 +237,13 @@ def seg_gfp(img, opt_params=0, ker_params=0, debug=True):
 
 if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
-    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=0.5, max_itr=100, opt_tolr=np.finfo(float).eps)
-    seg_phase(iu.load_img("images\\Scene1Interval077_TRANS.tif", 0.5, False, False), ker_params=ker_params, opt_params=opt_params, despeckle_size=3, filter_size=0, file_name="gen_phase_mask.png")
+    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=0.5,
+                           max_itr=100, opt_tolr=np.finfo(float).eps)
+    # For Bovine aortic endothelial cell(BAEC)
+    #ker_params = KerParams(ring_rad=4000, ring_wid=800, ker_rad=5, zetap=0.8, dict_size=20)
+
+    #ker_params = KerParams(ring_rad=10, ring_wid=0.05, ker_rad=10, zetap=0.8, dict_size=20)
+
+    #seg_phase(iu.load_img("images\\seq_nec\\Scene1Interval043_PHASE.png", 0.3, False, False), ker_params=ker_params, opt_params=opt_params, despeckle_size=3, filter_size=0, file_name="gen_phase_mask.png")
+    seg_phase(iu.load_img("images\\seq_nec\\Scene1Interval029_PHASE.png", 0.5, False, False), ker_params=ker_params, opt_params=opt_params, despeckle_size=3, filter_size=0, file_name="gen_phase_mask.png")
+    #seg_phase(iu.load_img("images\\small.png", 1, False, False), ker_params=ker_params, opt_params=opt_params, despeckle_size=3, filter_size=0, file_name="gen_phase_mask.png")

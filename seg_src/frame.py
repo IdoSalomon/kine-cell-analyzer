@@ -31,7 +31,7 @@ class Frame:
     dict_size : int
         Size of dictionary.
     """
-    def __init__(self, frame_state=FrameState.INIT, title="", num="", name="", cells={}, images={}, masks={}):
+    def __init__(self, frame_state=FrameState.INIT, title="", num="", name="", cells={}, images={}, masks={}, con_comps=[], tracked_mask=[]):
         self.frame_state = frame_state
         self.title = title
         self.name = name
@@ -39,6 +39,8 @@ class Frame:
         self.cells = cells
         self._images = images
         self._masks = masks
+        self.con_comps = con_comps
+        self.tracked_mask = tracked_mask
 
     def add_image(self, image):
         self.images.append(image)

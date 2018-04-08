@@ -9,6 +9,8 @@ import frame as fr
 import io_utils
 
 #seq_paths = {} # Paths to all sequence images
+from prec_params import KerParams, OptParams
+
 seq_frames = {} # dictionary <str,Frame> that holds all frames in sequence by number
 
 channel_types = ["GFP", "PHASE", "TxRed", "TRANS"] # different channels in sequence TODO turn to user input
@@ -33,33 +35,40 @@ def create_stack(chan_paths):
     return channels
 
 
-def create_masks(channels, interval):
-    pr.seg_phase(channels["TRANS"], file_name=interval, debug=True)
-    # TODO
+def create_masks(channels, ker_params, opt_params, interval):
+    chans = {}
+    chans["PHASE"] = pr.seg_phase(channels["PHASE"], ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=True)
     return channels
 
 
-def load_frame(interval, seq_paths):
+def load_frame(interval, ker_params, opt_params, seq_paths):
     images = create_stack(seq_paths[interval])
-    masks = create_masks(images, interval)
-
-    frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images)
+    masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval)
+    con_comps = pr.colorConnectedComponents(masks)
+    frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, con_comps=con_comps)
     print("Loaded frame {}\n".format(interval))
 
     return frame
 
 
-def load_sequence(dir):
+def load_sequence(dir, ker_params, opt_params):
     seq_paths = io_utils.load_paths(dir)
 
     for interval in seq_paths:
-        frame = load_frame(interval, seq_paths)
+        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths)
 
         seq_frames[frame.num] = frame
 
     print("Finished loading sequence!\n") # DEBUG
 
+def save_con_comps(dir):
+    print("todo")
+    # TODO
 
 
 if __name__ == "__main__":
-    load_sequence("images\\seq_apo")
+    ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
+    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=0.5,
+                           max_itr=100, opt_tolr=np.finfo(float).eps)
+
+    load_sequence("images\\seq_nec", ker_params=ker_params, opt_params=opt_params)
