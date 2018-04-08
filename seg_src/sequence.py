@@ -51,7 +51,7 @@ def get_cells_con_comps(con_comps, debug=True):
     centroids = con_comps[3]
     for i in range(num_labels):
         frame_label = i
-        area = stats[4][i]
+        area = stats[i][4]
         centroid = round(centroids[i][0]), round(centroids[i][1])
         cells[frame_label] = cell.Cell(frame_label=frame_label, area=area, centroid=centroid)
     return cells
@@ -61,7 +61,7 @@ def load_frame(interval, ker_params, opt_params, seq_paths, debug=True):
     images = create_stack(seq_paths[interval], opt_params=opt_params)
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval)
     con_comps = pr.get_connected_components(masks["PHASE"], grayscale=True, debug=debug)
-    #cells = get_cells_con_comps(con_comps, debug=True)
+    cells = get_cells_con_comps(con_comps, debug=True)
     frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, cells=cells, con_comps=con_comps)
     print("Loaded frame {}\n".format(interval))
 
