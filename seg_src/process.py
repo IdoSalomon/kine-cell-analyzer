@@ -117,7 +117,7 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
     labels = output[1]
 
     init_components = nb_components
-    filtered_components = 0
+    filtered_components = init_components
 
     # Find new cells area
     area = np.array([stats[i,cv2.CC_STAT_AREA] for i in range(1, len(stats))]) # TODO check why cell 0 area is large
@@ -137,7 +137,7 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
     filtered = np.zeros(output.shape)
     for i in range(0, nb_components):
         if sizes[i] >= min_size:
-            filtered_components += 1
+            filtered_components -= 1
             filtered[output == i + 1] = 255
 
     if debug:
@@ -150,7 +150,9 @@ def pre_filter_far_cells(thresh, despeckle_size=1, debug=True):
     # Find connected components
     connectivity = 4
     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=connectivity)
-    labels = output[1]
+
+    init_components = nb_components
+    filtered_components = init_components
 
     # Find cells area
     area = np.array([stats[i,cv2.CC_STAT_AREA] for i in range(1, len(stats))]) # TODO check why cell 0 area is large
@@ -166,10 +168,11 @@ def pre_filter_far_cells(thresh, despeckle_size=1, debug=True):
     filtered = np.zeros(output.shape)
     for i in range(0, nb_components):
         if sizes[i] >= min_size:
+            filtered_components -= 1
             filtered[output == i + 1] = 255
 
     if debug:
-        print('filtered {} out of X segmented particles. X cells remain.'.format(len(labels)))
+        print('filtered {} out of {} segmented particles. {} cells remain.'.format(filtered_components, init_components, init_components - filtered_components))
 
     return filtered
 

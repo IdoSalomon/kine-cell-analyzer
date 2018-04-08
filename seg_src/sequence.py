@@ -2,6 +2,7 @@ import os
 
 import cv2
 
+import cell
 import img_utils
 import img_utils as iu
 import numpy as np
@@ -44,10 +45,16 @@ def create_masks(channels, ker_params, opt_params, interval):
 
 
 def get_cells_con_comps(con_comps, debug=True):
-    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=connectivity)
-
-    #TODO
-    pass
+    cells = {}
+    num_labels = con_comps[0]
+    stats = con_comps[2]
+    centroids = con_comps[3]
+    for i in range(num_labels):
+        frame_label = i
+        area = stats[4][i]
+        centroid = round(centroids[i][0]), round(centroids[i][1])
+        cells[frame_label] = cell.Cell(frame_label=frame_label, area=area, centroid=centroid)
+    return cells
 
 
 def load_frame(interval, ker_params, opt_params, seq_paths, debug=True):
