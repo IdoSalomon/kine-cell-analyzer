@@ -1,5 +1,7 @@
 import os
 
+import cv2
+
 import img_utils
 import img_utils as iu
 import numpy as np
@@ -21,7 +23,7 @@ channel_types = ["GFP", "PHASE", "TxRed", "TRANS"] # different channels in seque
     print("Loaded paths!\n") # DEBUG"""
 
 
-def create_stack(chan_paths):
+def create_stack(chan_paths, opt_params):
     channels = {}
     # Scan all channels
     for chan_path in chan_paths:
@@ -29,7 +31,7 @@ def create_stack(chan_paths):
         for chan_type in channel_types:
             # Add relevant image to channel
             if chan_type in chan_path:
-                channels[chan_type] = img_utils.load_img(chan_path, 0.5, False, False)
+                channels[chan_type] = img_utils.load_img(chan_path, opt_params.img_scale, False, False)
                 break
 
     return channels
@@ -37,8 +39,8 @@ def create_stack(chan_paths):
 
 def create_masks(channels, ker_params, opt_params, interval):
     chans = {}
-    chans["PHASE"] = pr.seg_phase(channels["PHASE"], ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=True)
-    return channels
+    chans["PHASE"] = pr.seg_phase(channels["PHASE"], despeckle_size=5, filter_size=0, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=True)
+    return chans
 
 
 def get_cells_con_comps(con_comps, debug=True):
@@ -49,10 +51,10 @@ def get_cells_con_comps(con_comps, debug=True):
 
 
 def load_frame(interval, ker_params, opt_params, seq_paths, debug=True):
-    images = create_stack(seq_paths[interval])
+    images = create_stack(seq_paths[interval], opt_params=opt_params)
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval)
-    con_comps = pr.getConnectedComponents(masks, grayscale=True, debug=debug)
-    cells = get_cells_con_comps(con_comps, debug=True)
+    con_comps = pr.get_connected_components(masks["PHASE"], grayscale=True, debug=debug)
+    #cells = get_cells_con_comps(con_comps, debug=True)
     frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, cells=cells, con_comps=con_comps)
     print("Loaded frame {}\n".format(interval))
 

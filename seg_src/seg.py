@@ -30,7 +30,7 @@ def create_mask_dir(dir, ker_params, opt_params):
                 res_img = ps.prec_sparse(img, opt_params, ker_params, False)
                 red_channel = res_img[:, :, 0]
                 # color components
-                pr.getConnectedComponents(pr.gen_phase_mask(red_channel, False))
+                pr.get_connected_components(pr.gen_phase_mask(red_channel, False))
 
 
 if __name__== "__main__":

@@ -58,14 +58,15 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
         dbgImgs += [(orig_img, 'original image')]
         dbg.save_debug_fig(dbgImgs, file_name, zoom=5)
 
+    return filtered
 
-def getConnectedComponents(img, grayscale=True, debug=True):
+def get_connected_components(img, grayscale=True, debug=True):
     img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
     img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY)[1]  # ensure binary
     img = np.uint8(img)
 
     connectivity = 4
-    ret, labels = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
+    labels = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
 
     if grayscale:
         return labels
@@ -124,7 +125,7 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
     std = np.std(area)
 
     if filter_size == 0:
-        filter_size = mean - 1.5 * std
+        filter_size = mean - 1.2 * std
 
     # Remove background
     sizes = stats[1:, -1]
@@ -175,7 +176,7 @@ def pre_filter_far_cells(thresh, despeckle_size=1, debug=True):
 
 
 
-def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, filter_size=1, file_name=0, debug=True):
+def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, filter_size=0, file_name=0, debug=True):
     res_img = ps.prec_sparse(img, opt_params, ker_params, debug)
     red_channel = res_img[:, :, 0]
     return gen_phase_mask(red_channel, img, despeckle_size=despeckle_size, filter_size=filter_size, file_name=file_name)
