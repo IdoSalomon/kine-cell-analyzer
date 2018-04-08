@@ -59,12 +59,13 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
         dbg.save_debug_fig(dbgImgs, file_name, zoom=5)
 
 
-def colorConnectedComponents(img, grayscale=True, debug=True):
+def getConnectedComponents(img, grayscale=True, debug=True):
     img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
     img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY)[1]  # ensure binary
     img = np.uint8(img)
 
-    ret, labels = cv2.connectedComponents(img, connectivity=4)
+    connectivity = 4
+    ret, labels = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
 
     if grayscale:
         return labels

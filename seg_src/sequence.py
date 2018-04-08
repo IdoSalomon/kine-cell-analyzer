@@ -41,7 +41,9 @@ def create_masks(channels, ker_params, opt_params, interval):
     return channels
 
 
-def get_cells_con_comps(con_comps, debug):
+def get_cells_con_comps(con_comps, debug=True):
+    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=connectivity)
+
     #TODO
     pass
 
@@ -49,7 +51,7 @@ def get_cells_con_comps(con_comps, debug):
 def load_frame(interval, ker_params, opt_params, seq_paths, debug=True):
     images = create_stack(seq_paths[interval])
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval)
-    con_comps = pr.colorConnectedComponents(masks, grayscale=True, debug=debug)
+    con_comps = pr.getConnectedComponents(masks, grayscale=True, debug=debug)
     cells = get_cells_con_comps(con_comps, debug=True)
     frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, cells=cells, con_comps=con_comps)
     print("Loaded frame {}\n".format(interval))
