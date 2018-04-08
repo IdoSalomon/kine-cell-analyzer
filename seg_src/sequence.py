@@ -41,11 +41,17 @@ def create_masks(channels, ker_params, opt_params, interval):
     return channels
 
 
-def load_frame(interval, ker_params, opt_params, seq_paths):
+def get_cells_con_comps(con_comps, debug):
+    #TODO
+    pass
+
+
+def load_frame(interval, ker_params, opt_params, seq_paths, debug=True):
     images = create_stack(seq_paths[interval])
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval)
-    con_comps = pr.colorConnectedComponents(masks)
-    frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, con_comps=con_comps)
+    con_comps = pr.colorConnectedComponents(masks, grayscale=True, debug=debug)
+    cells = get_cells_con_comps(con_comps, debug=True)
+    frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, cells=cells, con_comps=con_comps)
     print("Loaded frame {}\n".format(interval))
 
     return frame
@@ -61,10 +67,16 @@ def load_sequence(dir, ker_params, opt_params):
 
     print("Finished loading sequence!\n") # DEBUG
 
-def save_con_comps(dir):
+def save_con_comps():
     print("todo")
     # TODO
 
+def load_tracked_masks(): # TODO remove
+    print("load_tracked_masks\n")
+    #for frame in seq_frames:
+        #frame.tracked_mask = img_utils.load_img(tracked_mask_path, 0.5, False, False)
+
+        #seq_frames[frame.num] = frame
 
 if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
@@ -72,3 +84,4 @@ if __name__ == "__main__":
                            max_itr=100, opt_tolr=np.finfo(float).eps)
 
     load_sequence("images\\seq_nec", ker_params=ker_params, opt_params=opt_params)
+    #save_con_comps()
