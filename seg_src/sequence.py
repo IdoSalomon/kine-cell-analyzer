@@ -47,13 +47,17 @@ def create_masks(channels, ker_params, opt_params, interval):
 def get_cells_con_comps(con_comps, debug=True):
     cells = {}
     num_labels = con_comps[0]
+    label_mat = con_comps[1]
     stats = con_comps[2]
     centroids = con_comps[3]
-    for i in range(num_labels):
+
+    for i in range(1, num_labels):
         frame_label = i
         area = stats[i][4]
         centroid = round(centroids[i][0]), round(centroids[i][1])
-        cells[frame_label] = cell.Cell(frame_label=frame_label, area=area, centroid=centroid)
+        pixels = np.where(label_mat == i)
+        pixels = list(zip(pixels[0], pixels[1]))
+        cells[frame_label] = cell.Cell(frame_label=frame_label, area=area, centroid=centroid, pixels=pixels)
     return cells
 
 
