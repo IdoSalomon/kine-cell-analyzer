@@ -70,6 +70,7 @@ def get_connected_components(img, grayscale=True, name="", debug=True):
     labels = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
 
     if grayscale:
+        io_utils.save_img(labels[1], "images\\seq_nec\\concomps\\" + name + ".png")  # TODO Remove
         return labels
     else:
         # Map component labels to hue val

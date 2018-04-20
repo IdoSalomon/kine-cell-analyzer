@@ -56,9 +56,9 @@ def load_tracked_mask(tracked_path, opt_params, grayscale=True,debug=False):
         cells[frame_label] = cell.Cell(frame_label=frame_label, area=area, centroid=centroid, pixels=pixels)"""
 
 
-def create_masks(channels, ker_params, opt_params, interval):
+def create_masks(channels, ker_params, opt_params, interval, debug):
     chans = {}
-    chans["PHASE"] = pr.seg_phase(channels["PHASE"], despeckle_size=6, filter_size=0, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=True)
+    chans["PHASE"] = pr.seg_phase(channels["PHASE"], despeckle_size=6, filter_size=0, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
     return chans
 
 
@@ -79,10 +79,10 @@ def get_cells_con_comps(con_comps, debug=True):
     return cells
 
 
-def load_frame(interval, tracked_paths, ker_params, opt_params, seq_paths, debug=True):
+def load_frame(interval, tracked_paths, ker_params, opt_params, seq_paths, debug=False):
     images = create_stack(seq_paths[interval], opt_params=opt_params)
-    masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval)
-    con_comps = pr.get_connected_components(masks["PHASE"], name=interval, grayscale=False, debug=debug)
+    masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug = debug)
+    con_comps = pr.get_connected_components(masks["PHASE"], name=interval, grayscale=True, debug=debug)
     cells = get_cells_con_comps(con_comps, debug=True)
 
     #tracked_mask = load_tracked_mask(seq_paths[interval], cells) # TODO Remove
@@ -98,7 +98,7 @@ def load_sequence(dir, ker_params, opt_params, dir_mask):
     tracked_paths = io_utils.load_paths(dir_mask) # TODO Remove
 
     for interval in seq_paths:
-        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths)
+        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths, debug = False)
 
         seq_frames[frame.num] = frame
 
