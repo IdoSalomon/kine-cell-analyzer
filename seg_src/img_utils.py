@@ -4,7 +4,7 @@ import cv2
 import matplotlib.image as mpimg
 import debug_utils as dbg
 
-def load_img(path, resize_factor, gray=True, eight_bit=True, float = True):
+def load_img(path, resize_factor, gray=True, eight_bit=True, float = True, normalize = True):
     """
 
     Loads normalized image
@@ -23,8 +23,10 @@ def load_img(path, resize_factor, gray=True, eight_bit=True, float = True):
     img : ndarray
         2D array of normalized image
     """
+    img = cv2.imread(path, cv2.IMREAD_ANYDEPTH)
+    if normalize:
+        img = cv2.normalize(img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX).astype(np.uint8)
 
-    img = cv2.normalize(cv2.imread(path, cv2.IMREAD_ANYDEPTH), None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX).astype(np.uint8)
     """if gray:
         img = cv2.imread(path, cv2.IMREAD_ANYDEPTH).astype(np.uint8)
     elif not eight_bit:

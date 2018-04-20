@@ -96,8 +96,8 @@ def load_frame(interval, tracked_paths, ker_params, opt_params, seq_paths, debug
     return frame
 
 
-def load_label_colors(num_labels):
-    for i in range(0, num_labels):
+def load_label_colors():
+    for i in range(1, 1024):
         label_colors[i] = random.randint(1, 255)
 
 
@@ -105,7 +105,6 @@ def load_label_colors(num_labels):
 def load_sequence(dir, ker_params, opt_params, dir_mask):
     seq_paths = io_utils.load_paths(dir)
     tracked_paths = io_utils.load_paths(dir_mask) # TODO Remove
-    load_label_colors(len(tracked_paths))
     for interval in seq_paths:
         frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths, debug = False)
 
@@ -117,12 +116,12 @@ def save_con_comps(dir):
     print("todo")
     # TODO
 
-def visualize_tracked_img(labeled_img, colors, name):
-    labeled_img = np.zeros_like(labeled_img)
+def visualize_tracked_img(img, colors, name):
+    labeled_img = np.zeros_like(img)
 
     # Map component labels to hue val
-    for i in range(1, int((np.max(labeled_img)))):
-        labeled_img[labeled_img == i] = label_colors[i] * (labeled_img[labeled_img == i] / labeled_img[labeled_img == i][0])
+    for i in range(1, np.max(img)):
+        labeled_img[img == i] = label_colors[i]
     blank_ch = 255 * np.ones_like(labeled_img)
     labeled_img = cv2.merge((labeled_img, blank_ch, blank_ch))
 
@@ -130,19 +129,35 @@ def visualize_tracked_img(labeled_img, colors, name):
     # cvt to BGR for display
     labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
     # set bg label to black
-    labeled_img[labeled_img == 0] = 0
+    labeled_img[img == 0] = 0
 
-    io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\col_track\\" + name + ".png")  # TODO Remove
-    #cv2.imshow('labeled.png', labeled_img)
-    #cv2.waitKey()
+    io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\col_track\\" + name)  # TODO Remove
+
+    # labeled_img = np.zeros_like(labeled_img)
+    #
+    # # Map component labels to hue val
+    # for i in range(1, int((np.max(labeled_img)))):
+    #     labeled_img[labeled_img == i] = label_colors[i] * (labeled_img[labeled_img == i] / labeled_img[labeled_img == i][0])
+    # blank_ch = 255 * np.ones_like(labeled_img)
+    # labeled_img = cv2.merge((labeled_img, blank_ch, blank_ch))
+    #
+    # labeled_img = np.uint8(labeled_img)
+    # # cvt to BGR for display
+    # labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
+    # # set bg label to black
+    # labeled_img[labeled_img == 0] = 0
+    #
+    # io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\col_track\\" + name + ".png")  # TODO Remove
+    # #cv2.imshow('labeled.png', labeled_img)
+    # #cv2.waitKey()
 
 
 def load_tracked_masks(dir, opt_params): # TODO DANIEL
     print("load_tracked_masks\n")
     tracked_paths = io_utils.load_paths(dir)
-
+    load_label_colors()
     for tracked_path in tracked_paths:
-        tracked_img = img_utils.load_img(dir + "\\" + tracked_path, opt_params.img_scale, False, False, float=False)
+        tracked_img = img_utils.load_img(dir + "\\" + tracked_path, 1, False, False, float=False, normalize=False)
         visualize_tracked_img(tracked_img, label_colors, io_utils.extract_name(tracked_path))
 
 
