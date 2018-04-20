@@ -120,12 +120,12 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
     filtered_components = init_components
 
     # Find new cells area
-    area = np.array([stats[i,cv2.CC_STAT_AREA] for i in range(1, len(stats))]) # TODO check why cell 0 area is large
+    area = np.array([stats[i,cv2.CC_STAT_AREA] for i in range(1, len(stats))])
     mean = np.mean(area)
     std = np.std(area)
 
     if filter_size == 0:
-        filter_size = mean - 1.2 * std
+        filter_size = mean - 1.4 * std
 
     # Remove background
     sizes = stats[1:, -1]
@@ -146,7 +146,7 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
     return filtered
 
 
-def pre_filter_far_cells(thresh, despeckle_size=1, debug=True):
+def pre_filter_far_cells(thresh, despeckle_size=0, debug=True):
     # Find connected components
     connectivity = 4
     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=connectivity)

@@ -1,4 +1,6 @@
 import os
+import cv2
+import numpy as np
 
 
 def extract_name(title):
@@ -57,3 +59,8 @@ def load_paths(dir):
                     path_lst = ["\\".join([dir,file])]
                     paths[name] = path_lst
     return paths
+
+def save_img(img, path, grayscale=True):
+    img = np.uint8(img)
+
+    cv2.imwrite(path, img)
