@@ -4,7 +4,7 @@ import cv2
 import matplotlib.image as mpimg
 import debug_utils as dbg
 
-def load_img(path, resize_factor, gray=True, eight_bit=True):
+def load_img(path, resize_factor, gray=True, eight_bit=True, float = True):
     """
 
     Loads normalized image
@@ -39,7 +39,10 @@ def load_img(path, resize_factor, gray=True, eight_bit=True):
     """if not eight_bit:
         return img"""
 
-    return im2double(img)
+    if float:
+        return im2double(img)
+    else:
+        return img
 
 def bg_removal(img, debug=False):
     """
