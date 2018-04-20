@@ -14,7 +14,7 @@ import io_utils
 #seq_paths = {} # Paths to all sequence images
 from prec_params import KerParams, OptParams
 
-seq_frames = {} # dictionary <str,Frame> that holds all frames in sequence by number
+seq_frames = {} # dictionary <int,Frame> that holds all frames in sequence by number
 
 channel_types = ["GFP", "PHASE", "TxRed", "TRANS"] # different channels in sequence TODO turn to user input
 
@@ -82,10 +82,9 @@ def get_cells_con_comps(con_comps, debug=True):
 def load_frame(interval, tracked_paths, ker_params, opt_params, seq_paths, debug=True):
     images = create_stack(seq_paths[interval], opt_params=opt_params)
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval)
-    con_comps = pr.get_connected_components(masks["PHASE"], grayscale=True, debug=debug)
+    con_comps = pr.get_connected_components(masks["PHASE"], name=interval, grayscale=False, debug=debug)
     cells = get_cells_con_comps(con_comps, debug=True)
 
-    io_utils.save_img(con_comps[1], "images\\seq_nec\\concomps\\" + interval + ".png") # TODO Remove
     #tracked_mask = load_tracked_mask(seq_paths[interval], cells) # TODO Remove
 
     frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, cells=cells, con_comps=con_comps)
