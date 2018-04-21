@@ -20,7 +20,8 @@ def extract_name(title):
         image name on success, "" otherwise
     """
     if title:
-        name = title.split('_') # removes channel and image type information
+        filename, file_extension = os.path.splitext(title)
+        name = filename.split('_') # removes channel and image type information
         if len(name) > 0:
             return name[0]
     return ""
@@ -44,23 +45,21 @@ def extract_num(title):
     if title:
         numbers = [int(s) for s in title if s.isdigit()]
         if len(numbers) > 0:
-            return "".join(str(numbers[-3:]))
+            return "".join([str(dig) for dig in numbers[-3:]])
     return ""
 
 
 def load_paths(dir):
     paths = {}
-    for r, d, f in os.walk(dir):
-        for file in f:
-            filename, file_extension = os.path.splitext(file)
-            if file_extension not in img_extensions:
-                break
-            name = extract_name(file)
+    for f in os.listdir(dir):
+        filename, file_extension = os.path.splitext(f)
+        if file_extension in img_extensions:
+            name = extract_name(f)
             if name:
                 if name in paths:
-                    paths[name].append("\\".join([dir,file]))
+                    paths[name].append("\\".join([dir, f]))
                 else:
-                    path_lst = ["\\".join([dir,file])]
+                    path_lst = ["\\".join([dir, f])]
                     paths[name] = path_lst
     return paths
 

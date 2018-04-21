@@ -12,6 +12,7 @@ import prec_sparse as ps
 import process as pr
 import frame as fr
 import io_utils
+import cell as cl
 
 from prec_params import KerParams, OptParams
 
@@ -68,34 +69,49 @@ def load_tracked_mask(tracked_path, opt_params):
             2D array of tracked image
     """
 
+    if tracked_path and opt_params:
+        return img_utils.load_img(tracked_path[0], 1, False, False, float=False, normalize=False)
 
-def get_cells_ext(tracked_img):
+
+def get_cells_ext(tracked_img, images, frame_id):
     """
     Loads cells from tracked image
     Parameters
     ----------
     tracked_img : ndarray
         2D array of tracked image
-
+    images : dict<str, ndarray>
+        dictionary that holds channel images by channel name
+    frame_id : str
+        ID of frame
     Returns
     -------
-    cells : list
-        list of cells
+    cells : dict<int, Cell>
+        dictionary of cells by cell ID
     """
-    cells = {}
-    num_labels = con_comps[0]
-    label_mat = con_comps[1]
-    stats = con_comps[2]
-    centroids = con_comps[3]
 
-    for i in range(1, num_labels):
-        frame_label = i
-        area = stats[i][4]
-        centroid = round(centroids[i][0]), round(centroids[i][1])
-        pixels = np.where(label_mat == i)
-        pixels = list(zip(pixels[0], pixels[1]))
-        cells[frame_label] = cell.Cell(frame_label=frame_label, area=area, centroid=centroid, pixels=pixels)
+    cells = {}
+    channels_pixels = {}
+
+    # Find cells in tracked image
+    labels = np.unique(tracked_img)
+
+    # Create cell for each label in tracked image
+    for label in labels:
+        # Find pixel values for each channel
+        for channel in images:
+            channels_pixels[channel] = (images[channel])[tracked_img == label]
+        cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels)
+        cells[label] = cell
+
+        # Assign frame to gloal label
+        if label not in cells_frames:
+            cells_frames[label] = [frame_id]
+        else:
+            cells_frames[label].append(frame_id)
+
     return cells
+
 
 
 def load_frame_ext(interval, tracked_paths, opt_params, seq_paths):
@@ -118,18 +134,19 @@ def load_frame_ext(interval, tracked_paths, opt_params, seq_paths):
     frame : Frame
         Loaded frame
     """
-    images = create_stack(seq_paths[interval], opt_params=opt_params)
-    cells = get_cells_con_comps(con_comps, debug=True)
 
-    #tracked_mask = load_tracked_mask(seq_paths[interval], cells) # TODO Remove
+    frame_id = io_utils.extract_num(interval)
+    images = create_stack(seq_paths[interval], opt_params=opt_params) # original channels
+    tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params) # image after tracking
+    cells = get_cells_ext(tracked_img=tracked_img, images=images, frame_id=frame_id) # image's cell representation
 
-    frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, cells=cells, con_comps=con_comps)
+    frame = fr.Frame(id=frame_id, title=interval, images=images, cells=cells, tracked_img=tracked_img)
     print("Loaded frame {}\n".format(interval))
 
     return frame
 
 
-def load_sequence_ext(dir, ker_params, opt_params, dir_tracked):
+def load_sequence_ext(dir, opt_params, dir_tracked):
     """
     Loads sequence of frames.
 
@@ -137,8 +154,6 @@ def load_sequence_ext(dir, ker_params, opt_params, dir_tracked):
     ----------
     dir : str
         path to image directory
-    ker_params : KerParams
-        kernel parameters
     opt_params : OptParams
         optimization parameters
     dir_tracked : str
@@ -146,11 +161,11 @@ def load_sequence_ext(dir, ker_params, opt_params, dir_tracked):
 
     """
     seq_paths = io_utils.load_paths(dir)
-    tracked_paths = io_utils.load_paths(dir_tracked) # TODO Remove
+    tracked_paths = io_utils.load_paths(dir_tracked)
     for interval in seq_paths:
-        frame = load_frame_ext(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths, debug = False)
+        frame = load_frame_ext(interval, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths)
 
-        seq_frames[frame.num] = frame
+        seq_frames[frame.id] = frame
 
     print("Finished loading sequence!\n") # DEBUG
 
@@ -210,8 +225,7 @@ if __name__ == "__main__":
 
     # load_tracked_masks("images\\seq_nec\\tracked")
     #
-    # load_sequence("images\\seq_nec", ker_params=ker_params, opt_params=opt_params, dir_mask="images\\seq_nec\\tracked")
-    load_tracked_masks("images\\seq_nec\\concomps\\track", opt_params)
+    load_sequence_ext("images\\seq_nec", opt_params=opt_params, dir_tracked="images\\seq_nec\\concomps\\track")
 
 
 #save_con_comps()

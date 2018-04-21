@@ -15,7 +15,7 @@ class Cell:
     dict_size : int
         Size of dictionary.
     """
-    def __init__(self, frame_label, global_label=1, area=0, centroid=(0,0), perimeter=0, circularity=0, pixels=0):
+    def __init__(self, frame_label, global_label=1, area=0, centroid=(0,0), perimeter=0, circularity=0, pixels=0, pixel_values={}):
         self.frame_label = frame_label
         self.global_label = global_label
         self.area = area
@@ -23,4 +23,5 @@ class Cell:
         self.perimeter = perimeter
         self.circularity = circularity
         self.pixels = pixels
+        self.pixel_values = pixel_values
 
