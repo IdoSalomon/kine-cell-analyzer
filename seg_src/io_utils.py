@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 
+img_extensions = [".tif", ".png", ".jpg"] # Valid file extensions to load
 
 def extract_name(title):
     """
@@ -51,6 +52,9 @@ def load_paths(dir):
     paths = {}
     for r, d, f in os.walk(dir):
         for file in f:
+            filename, file_extension = os.path.splitext(file)
+            if file_extension not in img_extensions:
+                break
             name = extract_name(file)
             if name:
                 if name in paths:
