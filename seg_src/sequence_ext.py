@@ -169,8 +169,33 @@ def load_sequence_ext(dir, opt_params, dir_tracked):
 
     print("Finished loading sequence!\n") # DEBUG
 
+def analyze_channels(channels):
+    """
 
-def debug_channel(img, colors, name):
+    For each cell appeared in the 1st frame, finds the first frameId in which
+    the cell is colored, repeated for each channel, and updates the cell_trans dictionary.
+
+    Parameters
+    ----------
+    channels : str
+        a string representation of the analayzed channeled, i.e 'TXRED'
+    """
+    for channel in channels:
+        # iterate over first frame identified cells
+        for cell in seq_frames[1].cells:
+            # iterate over next frames
+            for frame_id in range(2, max(seq_frames)):
+                label = seq_frames[frame_id].cells[cell.global_label]
+                # if cell is color has changed - update db
+                if check_changed(frame_id, label):
+                    cells_trans[frame_id][(channel, cell.global_label)] = frame_id
+                    break
+
+def check_changed(frame_id, label):
+
+
+
+def debug_channels(dir, channels):
     """
 
     Parameters
@@ -183,40 +208,19 @@ def debug_channel(img, colors, name):
     -------
 
     """
-    labeled_img = np.zeros_like(img)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
-    # Map component labels to hue val
-    for i in range(1, np.max(img)):
-        labeled_img[img == i] = label_colors[i]
-    blank_ch = 255 * np.ones_like(labeled_img)
-    labeled_img = cv2.merge((labeled_img, blank_ch, blank_ch))
-
-    labeled_img = np.uint8(labeled_img)
-    # cvt to BGR for display
-    labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
-    # set bg label to black
-    labeled_img[img == 0] = 0
-
-    io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\col_track\\" + name)  # TODO Remove
-
-    # labeled_img = np.zeros_like(labeled_img)
-    #
-    # # Map component labels to hue val
-    # for i in range(1, int((np.max(labeled_img)))):
-    #     labeled_img[labeled_img == i] = label_colors[i] * (labeled_img[labeled_img == i] / labeled_img[labeled_img == i][0])
-    # blank_ch = 255 * np.ones_like(labeled_img)
-    # labeled_img = cv2.merge((labeled_img, blank_ch, blank_ch))
-    #
-    # labeled_img = np.uint8(labeled_img)
-    # # cvt to BGR for display
-    # labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
-    # # set bg label to black
-    # labeled_img[labeled_img == 0] = 0
-    #
-    # io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\col_track\\" + name + ".png")  # TODO Remove
-    # #cv2.imshow('labeled.png', labeled_img)
-    # #cv2.waitKey()
-
+    for channel in channels:
+        for frame_id in range(1, max(seq_frames)):
+            frame_chan = seq_frames[frame_id].images[channel]
+            dbg_frame = np.zeros_like(frame_chan)
+            for cell in seq_frames[frame_id].cells:
+                if cells_trans[frame_id][(channel, cell.global_label)] <= frame_id:
+                    cell_mask = seq_frames[frame_id].tracked_img[cell.global_label]
+                    dbg_frame[cell_mask] = 255
+            path = dir + "\\" + channel + str(frame_id) + ".png"
+            io_utils.save_img(dbg_frame, path)
 
 if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
