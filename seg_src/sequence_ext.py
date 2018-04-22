@@ -22,7 +22,7 @@ channel_types = ["GFP", "PHASE", "TxRed", "TRANS"] # different channels in seque
 
 cells_frames = {} # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
 
-cells_trans = {} # dictionary <int, dict<str, int>> that holds dictionary of interval IDs by channels for each cell's transformations
+cells_trans = {} # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
 
 def create_stack(chan_paths, opt_params):
     """
@@ -178,35 +178,38 @@ def analyze_channels(channels):
     Parameters
     ----------
     channels : str
-        a string representation of the analayzed channeled, i.e 'TXRED'
+        a string representation of the analyzed channeled, e.g 'GFP'
     """
-    for channel in channels:
+    for channel in channels: # FIXME This kills performance
         # iterate over first frame identified cells
         for cell in seq_frames[1].cells:
             # iterate over next frames
             for frame_id in range(2, max(seq_frames)):
-                frame_bg = {} # dictionary <img, float, float> that holds the current frame channel + mean background
-                label = seq_frames[frame_id].cells[cell.global_label]
-                # if cell is color has changed - update db
-                if check_changed(frame_id, frame_bg, label, channel):
-                    cells_trans[frame_id][(channel, cell.global_label)] = frame_id
-                    break
+                if frame_id in cells_frames[cell]:
+                    frame_bg = {} # dictionary <img, float, float> that holds the current frame channel + mean background
+                    label = seq_frames[frame_id].cells[cell].global_label
+                    # if cell is color has changed - update db
+                    if check_changed(frame_id, frame_bg, label, channel):
+                        if cell not in cells_trans:
+                            cells_trans[cell] = {}
+                        cells_trans[cell][channel] = frame_id
+                        break
 
 def check_changed(frame_id, frame_stat, label, channel):
     frame_chan = seq_frames[frame_id].images[channel]
     bg_mask = seq_frames[frame_id].tracked_img == 0 # background label is 0
     if frame_id not in frame_stat:
         # remove background
-        frame_stat = iu.bg_removal(frame_chan)
+        bg = iu.bg_removal(frame_chan)
         # calculate background mean
         mean = np.mean(frame_chan[bg_mask])
         std = np.std(frame_chan[bg_mask])
-        frame_stat[frame_id] = (frame_stat, mean, std)
+        frame_stat[frame_id] = (bg, mean, std)
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
-    cell_mean = np.mean(cell.pixel_values)
-    if cell_mean - frame_stat[frame_id][1] > 2 * std:
+    cell_mean = np.mean(cell.pixel_values[channel])
+    if cell_mean - frame_stat[frame_id][1] > 2 * frame_stat[frame_id][2]:
         return True
     else:
         return False
@@ -232,11 +235,12 @@ def debug_channels(dir, channels):
             frame_chan = seq_frames[frame_id].images[channel]
             dbg_frame = np.zeros_like(frame_chan)
             for cell in seq_frames[frame_id].cells:
-                if cells_trans[frame_id][(channel, cell.global_label)] <= frame_id:
-                    cell_mask = seq_frames[frame_id].tracked_img == cell.global_label
+                if cells_trans[cell][channel] <= frame_id:
+                    cell_mask = seq_frames[frame_id].tracked_img == cell
                     dbg_frame[cell_mask] = 255
             path = dir + "\\" + channel + str(frame_id) + ".png"
             io_utils.save_img(dbg_frame, path)
+
 
 if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
@@ -247,5 +251,12 @@ if __name__ == "__main__":
     #
     load_sequence_ext("images\\seq_nec", opt_params=opt_params, dir_tracked="images\\seq_nec\\concomps\\track")
 
+    analyze_channels(["TxRed", "GFP"])
+
+    print ("Finished analyze_channels\n")
+
+    debug_channels("dbg\\chan_analysis", ["TxRed, GFP"])
+
+    print ("Finished debug_channels\n")
 
 #save_con_comps()

@@ -8,7 +8,7 @@ def extract_name(title):
     """
     Extracts image name from file title.
 
-    Assumes title format such that name is separated from rest of the title by '_'
+    Assumes title format such that channel name is separated from rest of the title by '_'
 
     Parameters
     ----------
@@ -31,7 +31,7 @@ def extract_num(title):
     """
     Extracts image (interval) number from file title.
 
-    Assumes title format such that last number in title is the positive image number.
+    Assumes title format such that last number in title is the positive image number comprised of 3 digits.
 
     Parameters
     ----------
@@ -40,13 +40,13 @@ def extract_num(title):
 
     Returns
     -------
-        Image number string on success, "" otherwise
+        Image number string on success, -1 otherwise
     """
     if title:
         numbers = [int(s) for s in title if s.isdigit()]
         if len(numbers) > 0:
-            return "".join([str(dig) for dig in numbers[-3:]])
-    return ""
+            return int("".join([str(dig) for dig in numbers[-3:]]))
+    return -1
 
 
 def load_paths(dir):

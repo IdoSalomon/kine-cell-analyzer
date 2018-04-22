@@ -31,14 +31,14 @@ class Frame:
     dict_size : int
         Size of dictionary.
     """
-    def __init__(self, frame_state=FrameState.INIT, title="", id=0, name="", cells={}, images={}, masks={}, con_comps=[], tracked_img=[]):
+    def __init__(self, frame_state=FrameState.INIT, title="", id=0, name="", cells={}, images={}, masks={}, con_comps=[], tracked_img={}):
         self.frame_state = frame_state
         self.title = title
         self.name = name
         self.id = id
         self.cells = cells
-        self._images = images
-        self._masks = masks
+        self.images = images
+        self.masks = masks
         self.con_comps = con_comps
         self.tracked_img = tracked_img
 
@@ -47,21 +47,3 @@ class Frame:
 
     def add_mask(self, mask):
         self.masks.append(mask)
-
-
-    @property
-    def images(self):
-        return self._images
-
-    @images.setter
-    def images(self, images):
-        self._images = images
-
-    @property
-    def masks(self):
-        return self._masks
-
-    @masks.setter
-    def images(self, masks):
-        self._masks = masks
-

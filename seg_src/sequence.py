@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
     # load_tracked_masks("images\\seq_nec\\tracked")
     #
-    # load_sequence("images\\seq_nec", ker_params=ker_params, opt_params=opt_params, dir_mask="images\\seq_nec\\tracked")
+    load_sequence("images\\seq_nec", ker_params=ker_params, opt_params=opt_params, dir_mask="images\\seq_nec\\concomps\\track")
     load_tracked_masks("images\\seq_nec\\concomps\\track", opt_params)
 
 
