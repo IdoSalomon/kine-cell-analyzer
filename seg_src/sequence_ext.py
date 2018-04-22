@@ -46,7 +46,7 @@ def create_stack(chan_paths, opt_params):
         for chan_type in channel_types:
             # Add relevant image to channel
             if chan_type in chan_path:
-                channels[chan_type] = img_utils.load_img(chan_path, opt_params.img_scale, False, False)
+                channels[chan_type] = img_utils.load_img(chan_path, opt_params.img_scale, float=False, normalize=False)
                 break
 
     return channels
@@ -195,12 +195,21 @@ def analyze_channels(channels):
                         cells_trans[cell][channel] = frame_id
                         break
 
+
+def histogram_equalize(img):
+    img_cdf, bin_centers = exposure.cumulative_distribution(img)
+    return np.interp(img, bin_centers, img_cdf)
+
+
 def check_changed(frame_id, frame_stat, label, channel):
     frame_chan = seq_frames[frame_id].images[channel]
     bg_mask = seq_frames[frame_id].tracked_img == 0 # background label is 0
     if frame_id not in frame_stat:
         # remove background
         bg = iu.bg_removal(frame_chan)
+        # Global histogram equalization
+        bg = np.uint8(bg)
+        bg = cv2.equalizeHist(bg)
         # calculate background mean
         mean = np.mean(frame_chan[bg_mask])
         std = np.std(frame_chan[bg_mask])
@@ -235,9 +244,10 @@ def debug_channels(dir, channels):
             frame_chan = seq_frames[frame_id].images[channel]
             dbg_frame = np.zeros_like(frame_chan)
             for cell in seq_frames[frame_id].cells:
-                if cells_trans[cell][channel] <= frame_id:
-                    cell_mask = seq_frames[frame_id].tracked_img == cell
-                    dbg_frame[cell_mask] = 255
+                if cell in cells_trans and channel in cells_trans[cell]:
+                    if cells_trans[cell][channel] <= frame_id:
+                        cell_mask = seq_frames[frame_id].tracked_img == cell
+                        dbg_frame[cell_mask] = 255
             path = dir + "\\" + channel + str(frame_id) + ".png"
             io_utils.save_img(dbg_frame, path)
 
@@ -255,7 +265,7 @@ if __name__ == "__main__":
 
     print ("Finished analyze_channels\n")
 
-    debug_channels("dbg\\chan_analysis", ["TxRed, GFP"])
+    debug_channels("dbg\\chan_analysis", ["TxRed", "GFP"])
 
     print ("Finished debug_channels\n")
 
