@@ -185,15 +185,31 @@ def analyze_channels(channels):
         for cell in seq_frames[1].cells:
             # iterate over next frames
             for frame_id in range(2, max(seq_frames)):
+                frame_bg = {} # dictionary <img, float, float> that holds the current frame channel + mean background
                 label = seq_frames[frame_id].cells[cell.global_label]
                 # if cell is color has changed - update db
-                if check_changed(frame_id, label):
+                if check_changed(frame_id, frame_bg, label, channel):
                     cells_trans[frame_id][(channel, cell.global_label)] = frame_id
                     break
 
-def check_changed(frame_id, label):
+def check_changed(frame_id, frame_stat, label, channel):
+    frame_chan = seq_frames[frame_id].images[channel]
+    bg_mask = seq_frames[frame_id].tracked_img == 0 # background label is 0
+    if frame_id not in frame_stat:
+        # remove background
+        frame_stat = iu.bg_removal(frame_chan)
+        # calculate background mean
+        mean = np.mean(frame_chan[bg_mask])
+        std = np.std(frame_chan[bg_mask])
+        frame_stat[frame_id] = (frame_stat, mean, std)
 
-
+    # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
+    cell = seq_frames[frame_id].cells[label]
+    cell_mean = np.mean(cell.pixel_values)
+    if cell_mean - frame_stat[frame_id][1] > 2 * std:
+        return True
+    else:
+        return False
 
 def debug_channels(dir, channels):
     """
@@ -217,7 +233,7 @@ def debug_channels(dir, channels):
             dbg_frame = np.zeros_like(frame_chan)
             for cell in seq_frames[frame_id].cells:
                 if cells_trans[frame_id][(channel, cell.global_label)] <= frame_id:
-                    cell_mask = seq_frames[frame_id].tracked_img[cell.global_label]
+                    cell_mask = seq_frames[frame_id].tracked_img == cell.global_label
                     dbg_frame[cell_mask] = 255
             path = dir + "\\" + channel + str(frame_id) + ".png"
             io_utils.save_img(dbg_frame, path)
