@@ -181,12 +181,13 @@ def analyze_channels(channels):
         a string representation of the analyzed channeled, e.g 'GFP'
     """
     for channel in channels: # FIXME This kills performance
+        frame_bg = {}  # dictionary <img, float, float> that holds the current frame channel + mean background
+
         # iterate over first frame identified cells
         for cell in seq_frames[1].cells:
             # iterate over next frames
             for frame_id in range(2, max(seq_frames)):
                 if frame_id in cells_frames[cell]:
-                    frame_bg = {} # dictionary <img, float, float> that holds the current frame channel + mean background
                     label = seq_frames[frame_id].cells[cell].global_label
                     # if cell is color has changed - update db
                     if check_changed(frame_id, frame_bg, label, channel):
