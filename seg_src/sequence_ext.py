@@ -46,7 +46,7 @@ def create_stack(chan_paths, opt_params):
         for chan_type in channel_types:
             # Add relevant image to channel
             if chan_type in chan_path:
-                channels[chan_type] = img_utils.load_img(chan_path, opt_params.img_scale, float=False, normalize=True)
+                channels[chan_type] = img_utils.load_img(chan_path, opt_params.img_scale, float=False, normalize=False)
                 break
 
     return channels
@@ -173,14 +173,15 @@ def seg_aux_channels(channels):
     for channel in channels:
         for frame_id in range(2, max(seq_frames)):
             frame_chan = seq_frames[frame_id].images[channel]
-            frame_chan = iu.bg_removal(frame_chan)
+            # frame_chan = iu.im2double(frame_chan)
+            # frame_chan = iu.bg_removal(frame_chan)
 
             # normalize after background removal for threshold
             frame_chan = cv2.normalize(frame_chan, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
             frame_chan = np.uint8(frame_chan)
 
             # perform OTSU thresholding
-            tmp, frame_chan = cv2.threshold(frame_chan, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            # tmp, frame_chan = cv2.threshold(frame_chan, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             seq_frames[frame_id].images[channel] = frame_chan
 
 
