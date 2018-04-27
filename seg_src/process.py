@@ -182,7 +182,20 @@ def pre_filter_far_cells(thresh, despeckle_size=0, debug=True):
     return filtered
 
 
+def process_aux_channels(img, despeckle_size=1, kernel=np.ones((2, 2), np.uint8), filter_size=0):
+    kernel = np.ones((2, 2), np.uint8)
 
+    # step 1 - filter noise
+    filtered = pre_filter_far_cells(img, despeckle_size=despeckle_size)
+
+    # step 2 - dilate
+    dilated = cv2.dilate(filtered, kernel, iterations=1)
+    filtered = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel, iterations=1)
+
+    # step 3 - filter far/dead cells
+    filtered = filter_far_cells(filtered, filter_size=filter_size)
+
+    return filtered
 
 def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, filter_size=0, file_name=0, debug=True):
     res_img = ps.prec_sparse(img, opt_params, ker_params, debug)

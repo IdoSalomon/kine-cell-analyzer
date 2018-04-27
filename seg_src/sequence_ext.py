@@ -47,7 +47,7 @@ def create_stack(chan_paths, opt_params):
             # Add relevant image to channel
             if chan_type in chan_path:
                 img = img_utils.load_img(chan_path, opt_params.img_scale, float=False, normalize=False)
-                channels[chan_type] = seg_aux_channels(img)
+                channels[chan_type] = seg_aux_channels(img, chan_type)
                 break
 
     return channels
@@ -170,17 +170,23 @@ def load_sequence_ext(dir, opt_params, dir_tracked):
 
     print("Finished loading sequence!\n") # DEBUG
 
-def seg_aux_channels(img):
+
+def seg_aux_channels(img, chan_type):
     img = iu.im2double(img)
     img = iu.bg_removal(img)
 
-    # normalize after background removal for threshold
+    # normalizefor threshold
     img = cv2.normalize(img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
     img = np.uint8(img)
 
     # perform OTSU thresholding
     tmp, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    #if chan_type == "GFP":
+    #    return pr.process_aux_channels(img, despeckle_size=6, kernel=np.ones((2, 2), np.uint8))
+
     return img
+
 
 
 
@@ -218,12 +224,16 @@ def histogram_equalize(img):
     return np.interp(img, bin_centers, img_cdf)
 
 
-def check_changed(frame_id, frame_stat, label, channel):
+def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.15): # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
-    cell_mean = np.mean(cell.pixel_values[channel])
-    if cell_mean > 25: # 10% covered
+    # cell_mean = np.mean(cell.pixel_values[channel])
+    cell_area = cell.pixel_values[channel].size
+    cell_colored = np.sum(cell.pixel_values[channel]) / 255
+    cell_intensity = cell_colored / cell_area
+
+    if cell_intensity > thresh_change:
         return True
     else:
         return False
