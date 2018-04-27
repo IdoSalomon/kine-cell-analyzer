@@ -200,16 +200,17 @@ def analyze_channels(channels):
 
         # iterate over first frame identified cells
         for cell in seq_frames[1].cells:
-            # iterate over next frames
-            for frame_id in range(2, max(seq_frames)):
-                if frame_id in cells_frames[cell]:
-                    label = seq_frames[frame_id].cells[cell].global_label
-                    # if cell is color has changed - update db
-                    if check_changed(frame_id, frame_bg, label, channel):
-                        if cell not in cells_trans:
-                            cells_trans[cell] = {}
-                        cells_trans[cell][channel] = frame_id
-                        break
+            if cell != 0: # skip background label
+                # iterate over next frames
+                for frame_id in range(2, max(seq_frames)):
+                    if frame_id in cells_frames[cell]:
+                        label = seq_frames[frame_id].cells[cell].global_label
+                        # if cell is color has changed - update db
+                        if check_changed(frame_id, frame_bg, label, channel):
+                            if cell not in cells_trans:
+                                cells_trans[cell] = {}
+                            cells_trans[cell][channel] = frame_id
+                            break
 
 
 def histogram_equalize(img):
@@ -222,7 +223,7 @@ def check_changed(frame_id, frame_stat, label, channel):
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
     cell_mean = np.mean(cell.pixel_values[channel])
-    if cell_mean > 25:
+    if cell_mean > 25: # 10% covered
         return True
     else:
         return False
