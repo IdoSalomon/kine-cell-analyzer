@@ -92,13 +92,13 @@ def get_cells_ext(tracked_img, images, frame_id):
     """
 
     cells = {}
-    channels_pixels = {}
 
     # Find cells in tracked image
     labels = np.unique(tracked_img)
 
     # Create cell for each label in tracked image
     for label in labels:
+        channels_pixels = {}
         # Find pixel values for each channel
         for channel in images:
             channels_pixels[channel] = (images[channel])[tracked_img == label]
@@ -218,23 +218,11 @@ def histogram_equalize(img):
 
 
 def check_changed(frame_id, frame_stat, label, channel):
-    frame_chan = seq_frames[frame_id].images[channel]
-    bg_mask = seq_frames[frame_id].tracked_img == 0 # background label is 0
-    if frame_id not in frame_stat:
-        # remove background
-        # bg = iu.bg_removal(frame_chan)
-        # Global histogram equalization
-        bg = np.uint8(frame_chan)
-        bg = cv2.equalizeHist(bg)
-        # calculate background mean
-        mean = np.mean(frame_chan[bg_mask])
-        std = np.std(frame_chan[bg_mask])
-        frame_stat[frame_id] = (bg, mean, std)
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
     cell_mean = np.mean(cell.pixel_values[channel])
-    if cell_mean - frame_stat[frame_id][1] > 2 * frame_stat[frame_id][2]:
+    if cell_mean > 25:
         return True
     else:
         return False
