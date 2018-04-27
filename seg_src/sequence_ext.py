@@ -46,7 +46,7 @@ def create_stack(chan_paths, opt_params):
         for chan_type in channel_types:
             # Add relevant image to channel
             if chan_type in chan_path:
-                channels[chan_type] = img_utils.load_img(chan_path, opt_params.img_scale, float=False, normalize=False)
+                channels[chan_type] = img_utils.load_img(chan_path, opt_params.img_scale, float=False, normalize=True)
                 break
 
     return channels
@@ -169,6 +169,13 @@ def load_sequence_ext(dir, opt_params, dir_tracked):
 
     print("Finished loading sequence!\n") # DEBUG
 
+def seg_aux_channels(channels):
+    for channel in channels:
+        for frame_id in range(2, max(seq_frames)):
+            frame_chan = seq_frames[frame_id].images[channel]
+            seq_frames[frame_id].images[channel] = iu.bg_removal(frame_chan)
+
+
 def analyze_channels(channels):
     """
 
@@ -207,9 +214,9 @@ def check_changed(frame_id, frame_stat, label, channel):
     bg_mask = seq_frames[frame_id].tracked_img == 0 # background label is 0
     if frame_id not in frame_stat:
         # remove background
-        bg = iu.bg_removal(frame_chan)
+        # bg = iu.bg_removal(frame_chan)
         # Global histogram equalization
-        bg = np.uint8(bg)
+        bg = np.uint8(frame_chan)
         bg = cv2.equalizeHist(bg)
         # calculate background mean
         mean = np.mean(frame_chan[bg_mask])
@@ -250,7 +257,10 @@ def debug_channels(dir, channels):
                         cell_mask = seq_frames[frame_id].tracked_img == cell
                         dbg_frame[cell_mask] = 255
             path = dir + "\\" + channel + str(frame_id) + ".png"
+            thresh_path = dir + "\\" + channel + str(frame_id) + "_THRESH.png"
             io_utils.save_img(dbg_frame, path)
+            io_utils.save_img(seq_frames[frame_id].images[channel], thresh_path, float=True)
+
 
 
 if __name__ == "__main__":
@@ -261,6 +271,10 @@ if __name__ == "__main__":
     # load_tracked_masks("images\\seq_nec\\tracked")
     #
     load_sequence_ext("images\\seq_nec", opt_params=opt_params, dir_tracked="images\\seq_nec\\concomps\\track")
+
+    seg_aux_channels(["TxRed", "GFP"])
+
+    print("Finished segmentating channels")
 
     analyze_channels(["TxRed", "GFP"])
 

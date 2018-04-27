@@ -63,7 +63,7 @@ def load_paths(dir):
                     paths[name] = path_lst
     return paths
 
-def save_img(img, path, grayscale=True): #TODO: change to 16 bits
-    img = np.uint8(img)
-
+def save_img(img, path, float=False): #TODO: change to 16 bits
+    if not float:
+        img = np.uint8(img)
     cv2.imwrite(path, img)
