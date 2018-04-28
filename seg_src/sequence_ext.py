@@ -212,7 +212,7 @@ def analyze_channels(channels):
         frame_bg = {}  # dictionary <img, float, float> that holds the current frame channel + mean background
 
         # iterate over first frame identified cells
-        for cell in cells_frames:
+        for cell in seq_frames[1].cells:
             if cell != 0: # skip background label
                 # iterate over next frames
                 for frame_id in range(2, max(seq_frames)):
@@ -270,7 +270,7 @@ def debug_channels(dir, channels):
                     if cells_trans[cell][channel] <= frame_id:
                         cell_mask = seq_frames[frame_id].tracked_img == cell
                         dbg_frame[cell_mask] = 255
-                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 190, 2)
+                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 190, 2)
             path = dir + "\\" + channel + str(frame_id) + ".png"
             thresh_path = dir + "\\" + channel + str(frame_id) + "_THRESH.png"
             io_utils.save_img(dbg_frame, path)
