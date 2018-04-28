@@ -102,7 +102,7 @@ def get_cells_ext(tracked_img, images, frame_id):
         # Find pixel values for each channel
         for channel in images:
             channels_pixels[channel] = (images[channel])[tracked_img == label]
-        first_elemnt = np.argwhere(tracked_img == label)[5]
+        first_elemnt = np.argwhere(tracked_img == label)[0]
         centroid = (first_elemnt[1], first_elemnt[0]) # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
         cells[label] = cell
@@ -181,6 +181,8 @@ def seg_aux_channels(img, chan_type):
     img = cv2.normalize(img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
     img = np.uint8(img)
 
+    return img
+
     # perform OTSU thresholding
     #tmp, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU + cv2.THRE)
     # img = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 5)
@@ -192,9 +194,6 @@ def seg_aux_channels(img, chan_type):
 
     #if chan_type == "GFP":
     return pr.process_aux_channels(img, despeckle_size=9, kernel=np.ones((2, 2), np.uint8))
-
-    return img
-
 
 
 
@@ -213,7 +212,7 @@ def analyze_channels(channels):
         frame_bg = {}  # dictionary <img, float, float> that holds the current frame channel + mean background
 
         # iterate over first frame identified cells
-        for cell in seq_frames[1].cells:
+        for cell in cells_frames:
             if cell != 0: # skip background label
                 # iterate over next frames
                 for frame_id in range(2, max(seq_frames)):
@@ -232,7 +231,7 @@ def histogram_equalize(img):
     return np.interp(img, bin_centers, img_cdf)
 
 
-def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.15): # TODO change threshold
+def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.065): # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
