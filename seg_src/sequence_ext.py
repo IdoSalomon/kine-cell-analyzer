@@ -107,7 +107,7 @@ def get_cells_ext(tracked_img, images, frame_id):
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
         cells[label] = cell
 
-        # Assign frame to gloal label
+        # Assign frame to global label
         if label not in cells_frames:
             cells_frames[label] = [frame_id]
         else:
@@ -177,10 +177,9 @@ def seg_aux_channels(img, chan_type):
     img = iu.im2double(img)
     img = iu.bg_removal(img)
 
-    # normalizefor threshold
+    # normalize for threshold
     img = cv2.normalize(img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
     img = np.uint8(img)
-
     return img
 
     # perform OTSU thresholding
@@ -231,7 +230,7 @@ def histogram_equalize(img):
     return np.interp(img, bin_centers, img_cdf)
 
 
-def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.065): # TODO change threshold
+def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.07): # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]

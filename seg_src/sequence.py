@@ -85,7 +85,7 @@ def get_cells_con_comps(con_comps, debug=True):
 def load_frame(interval, ker_params, opt_params, seq_paths, debug=False):
     images = create_stack(seq_paths[interval], opt_params=opt_params)
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug = debug)
-    con_comps = pr.get_connected_components(masks["TRANS"], name=interval, grayscale=True, debug=debug)
+    con_comps = pr.get_connected_components(masks["TRANS"], grayscale=True, dst_path="images\\seq_apo\\concomps\\" + interval + ".tif", debug=debug)
     cells = get_cells_con_comps(con_comps, debug=True)
 
     #tracked_mask = load_tracked_mask(seq_paths[interval], cells) # TODO Remove
@@ -97,14 +97,13 @@ def load_frame(interval, ker_params, opt_params, seq_paths, debug=False):
 
 
 def load_label_colors():
-    for i in range(1, 1024):
+    for i in range(1, 2000):
         label_colors[i] = random.randint(1, 255)
 
 
 
 def load_sequence(dir, ker_params, opt_params, dir_mask):
     seq_paths = io_utils.load_paths(dir)
-    # tracked_paths = io_utils.load_paths(dir_mask) # TODO Remove
     for interval in seq_paths:
         frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, debug = False)
 

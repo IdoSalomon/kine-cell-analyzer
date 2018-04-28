@@ -61,7 +61,7 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
 
     return filtered
 
-def get_connected_components(img, grayscale=True, name="", debug=True):
+def get_connected_components(img, dst_path, grayscale=True, debug=True):
     img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
     img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY)[1]  # ensure binary
     img = np.uint8(img)
@@ -70,7 +70,7 @@ def get_connected_components(img, grayscale=True, name="", debug=True):
     labels = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
 
     if grayscale:
-        io_utils.save_img(labels[1], "images\\seq_nec\\concomps\\" + name + ".png")  # TODO Remove
+        io_utils.save_img(labels[1], dst_path, float=True)  # TODO Remove
         return labels
     else:
         # Map component labels to hue val
@@ -84,7 +84,7 @@ def get_connected_components(img, grayscale=True, name="", debug=True):
     # set bg label to black
     labeled_img[label_hue == 0] = 0
 
-    io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\" + name + ".png") # TODO Remove
+    io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\" + name + ".tif") # TODO Remove
 
     return labels
     #cv2.imshow('labeled.png', labeled_img)
