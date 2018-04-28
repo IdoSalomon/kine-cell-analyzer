@@ -230,7 +230,7 @@ def histogram_equalize(img):
     return np.interp(img, bin_centers, img_cdf)
 
 
-def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.07): # TODO change threshold
+def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.04): # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
@@ -272,8 +272,8 @@ def debug_channels(dir, channels):
                         cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 190, 2)
             path = dir + "\\" + channel + str(frame_id) + ".png"
             thresh_path = dir + "\\" + channel + str(frame_id) + "_THRESH.png"
-            io_utils.save_img(dbg_frame, path)
-            io_utils.save_img(seq_frames[frame_id].images[channel], thresh_path, float=True)
+            io_utils.save_img(dbg_frame, path, uint8=True)
+            io_utils.save_img(seq_frames[frame_id].images[channel], thresh_path, uint8=True)
 
 
 
@@ -284,13 +284,13 @@ if __name__ == "__main__":
 
     # load_tracked_masks("images\\seq_nec\\tracked")
     #
-    load_sequence_ext("images\\seq_nec", opt_params=opt_params, dir_tracked="images\\seq_nec\\concomps\\track")
+    load_sequence_ext("images\\seq_apo", opt_params=opt_params, dir_tracked="images\\seq_apo\\concomps\\track")
 
     analyze_channels(["TxRed", "GFP"])
 
     print ("Finished analyze_channels\n")
 
-    debug_channels("dbg\\chan_analysis", ["TxRed", "GFP"])
+    debug_channels("dbg\\chan_analysis_apo", ["TxRed", "GFP"])
 
     print ("Finished debug_channels\n")
 
