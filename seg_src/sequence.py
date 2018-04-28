@@ -61,7 +61,7 @@ def load_tracked_mask(tracked_path, opt_params, grayscale=True,debug=False):
 
 def create_masks(channels, ker_params, opt_params, interval, debug):
     chans = {}
-    chans["PHASE"] = pr.seg_phase(channels["PHASE"], despeckle_size=6, filter_size=0, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
+    chans["TRANS"] = pr.seg_phase(channels["TRANS"], despeckle_size=6, filter_size=0, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
     return chans
 
 
@@ -82,15 +82,15 @@ def get_cells_con_comps(con_comps, debug=True):
     return cells
 
 
-def load_frame(interval, tracked_paths, ker_params, opt_params, seq_paths, debug=False):
+def load_frame(interval, ker_params, opt_params, seq_paths, debug=False):
     images = create_stack(seq_paths[interval], opt_params=opt_params)
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug = debug)
-    con_comps = pr.get_connected_components(masks["PHASE"], name=interval, grayscale=True, debug=debug)
+    con_comps = pr.get_connected_components(masks["TRANS"], name=interval, grayscale=True, debug=debug)
     cells = get_cells_con_comps(con_comps, debug=True)
 
     #tracked_mask = load_tracked_mask(seq_paths[interval], cells) # TODO Remove
 
-    frame = fr.Frame(num=io_utils.extract_num(interval), title=interval, images=images, masks=masks, cells=cells, con_comps=con_comps)
+    frame = fr.Frame(id=io_utils.extract_num(interval), title=interval, images=images, masks=masks, cells=cells, con_comps=con_comps)
     print("Loaded frame {}\n".format(interval))
 
     return frame
@@ -104,11 +104,11 @@ def load_label_colors():
 
 def load_sequence(dir, ker_params, opt_params, dir_mask):
     seq_paths = io_utils.load_paths(dir)
-    tracked_paths = io_utils.load_paths(dir_mask) # TODO Remove
+    # tracked_paths = io_utils.load_paths(dir_mask) # TODO Remove
     for interval in seq_paths:
-        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths, debug = False)
+        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, debug = False)
 
-        seq_frames[frame.num] = frame
+        seq_frames[frame.id] = frame
 
     print("Finished loading sequence!\n") # DEBUG
 
@@ -168,8 +168,8 @@ if __name__ == "__main__":
 
     # load_tracked_masks("images\\seq_nec\\tracked")
     #
-    load_sequence("images\\seq_nec", ker_params=ker_params, opt_params=opt_params, dir_mask="images\\seq_nec\\concomps\\track")
-    load_tracked_masks("images\\seq_nec\\concomps\\track", opt_params)
+    load_sequence("images\\seq_apo", ker_params=ker_params, opt_params=opt_params, dir_mask="images\\seq_apo\\concomps\\track")
+    # load_tracked_masks("images\\seq_nec\\concomps\\track", opt_params)
 
 
 #save_con_comps()
