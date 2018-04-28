@@ -130,7 +130,7 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
     std = np.std(area)
 
     if filter_size == 0:
-        filter_size = mean - 1.4 * std
+        filter_size = mean - 1.0 * std
 
     # Remove background
     sizes = stats[1:, -1]
