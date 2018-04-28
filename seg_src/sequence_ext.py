@@ -18,7 +18,7 @@ from prec_params import KerParams, OptParams
 
 seq_frames = {} # dictionary <int,Frame> that holds all frames in sequence by number
 
-channel_types = ["GFP", "PHASE", "TxRed", "TRANS"] # different channels in sequence TODO turn to user input
+channel_types = ["GFP", "TxRed"] # different channels in sequence TODO turn to user input
 
 cells_frames = {} # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
 
@@ -102,7 +102,9 @@ def get_cells_ext(tracked_img, images, frame_id):
         # Find pixel values for each channel
         for channel in images:
             channels_pixels[channel] = (images[channel])[tracked_img == label]
-        cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels)
+        first_elemnt = np.argwhere(tracked_img == label)[5]
+        centroid = (first_elemnt[1], first_elemnt[0]) # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
+        cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
         cells[label] = cell
 
         # Assign frame to gloal label
@@ -180,10 +182,16 @@ def seg_aux_channels(img, chan_type):
     img = np.uint8(img)
 
     # perform OTSU thresholding
-    tmp, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    #tmp, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU + cv2.THRE)
+    # img = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 5)
+
+    thresh_otsu, tmp = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    thresh_mean = np.mean(img)
+    thresh = (thresh_otsu + thresh_mean) / 2
+    tmp2, img = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
 
     #if chan_type == "GFP":
-    #    return pr.process_aux_channels(img, despeckle_size=6, kernel=np.ones((2, 2), np.uint8))
+    return pr.process_aux_channels(img, despeckle_size=9, kernel=np.ones((2, 2), np.uint8))
 
     return img
 
@@ -263,6 +271,7 @@ def debug_channels(dir, channels):
                     if cells_trans[cell][channel] <= frame_id:
                         cell_mask = seq_frames[frame_id].tracked_img == cell
                         dbg_frame[cell_mask] = 255
+                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 190, 2)
             path = dir + "\\" + channel + str(frame_id) + ".png"
             thresh_path = dir + "\\" + channel + str(frame_id) + "_THRESH.png"
             io_utils.save_img(dbg_frame, path)
