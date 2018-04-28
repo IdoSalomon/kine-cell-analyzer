@@ -61,7 +61,7 @@ def load_tracked_mask(tracked_path, opt_params, grayscale=True,debug=False):
 
 def create_masks(channels, ker_params, opt_params, interval, debug):
     chans = {}
-    chans["TRANS"] = pr.seg_phase(channels["TRANS"], despeckle_size=6, filter_size=0, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
+    chans["TRANS"] = pr.seg_phase(channels["TRANS"], despeckle_size=10, filter_size=0, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
     return chans
 
 
@@ -84,7 +84,7 @@ def get_cells_con_comps(con_comps, debug=True):
 
 def load_frame(interval, ker_params, opt_params, seq_paths, debug=False):
     images = create_stack(seq_paths[interval], opt_params=opt_params)
-    masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug = debug)
+    masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug=debug)
     con_comps = pr.get_connected_components(masks["TRANS"], grayscale=True, dst_path="images\\seq_apo\\concomps\\" + interval + ".tif", debug=debug)
     cells = get_cells_con_comps(con_comps, debug=True)
 
