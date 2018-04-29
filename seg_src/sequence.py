@@ -83,10 +83,10 @@ def get_cells_con_comps(con_comps, debug=True):
     return cells
 
 
-def load_frame(interval, ker_params, opt_params, seq_paths, debug=False):
+def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir,  debug=False):
     images = create_stack(seq_paths[interval], opt_params=opt_params)
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug=debug)
-    con_comps = pr.get_connected_components(masks["TRANS"], grayscale=True, dst_path="images\\seq_apo\\concomps\\" + interval + ".tif", debug=debug)
+    con_comps = pr.get_connected_components(masks["TRANS"], grayscale=True, dst_path=comps_dir + '\\' + interval + ".tif", debug=debug)
     cells = get_cells_con_comps(con_comps, debug=True)
 
     #tracked_mask = load_tracked_mask(seq_paths[interval], cells) # TODO Remove
@@ -103,10 +103,10 @@ def load_label_colors():
 
 
 
-def load_sequence(dir, ker_params, opt_params, dir_mask):
+def load_sequence(dir, ker_params, opt_params, dir_mask, comps_dir):
     seq_paths = io_utils.load_paths(dir)
     for interval in seq_paths:
-        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, debug = False)
+        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, debug = False, comps_dir=comps_dir)
 
         seq_frames[frame.id] = frame
 
@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
     # load_tracked_masks("images\\seq_nec\\tracked")
     #
-    load_sequence("images\\seq_u937_nec", ker_params=ker_params, opt_params=opt_params, dir_mask="images\\seq_u937_nec\\concomps\\track")
+    load_sequence("images\\seq_u937_nec", ker_params=ker_params, opt_params=opt_params,comps_dir = "images\\seq_u937_nec\\concomps", dir_mask="images\\seq_u937_nec\\concomps\\track")
     
     track_sequence()
     
