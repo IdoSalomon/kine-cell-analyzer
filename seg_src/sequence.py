@@ -11,6 +11,7 @@ import prec_sparse as ps
 import process as pr
 import frame as fr
 import io_utils
+import subprocess
 
 #seq_paths = {} # Paths to all sequence images
 from prec_params import KerParams, OptParams
@@ -160,6 +161,10 @@ def load_tracked_masks(dir, opt_params): # TODO DANIEL
         visualize_tracked_img(tracked_img, label_colors, io_utils.extract_name(tracked_path))
 
 
+def track_sequence():
+    # TODO Add path params to override config
+    subprocess.call(['java', '-jar', 'lib\\Lineage_Mapper\\Lineage_Mapper.jar'], shell=True)
+
 if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
     opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=0.5,
@@ -167,7 +172,11 @@ if __name__ == "__main__":
 
     # load_tracked_masks("images\\seq_nec\\tracked")
     #
-    load_sequence("images\\seq_apo", ker_params=ker_params, opt_params=opt_params, dir_mask="images\\seq_apo\\concomps\\track")
+    #load_sequence("images\\seq_apo", ker_params=ker_params, opt_params=opt_params, dir_mask="images\\seq_apo\\concomps\\track")
+    
+    track_sequence()
+    
+    
     # load_tracked_masks("images\\seq_nec\\concomps\\track", opt_params)
 
 
