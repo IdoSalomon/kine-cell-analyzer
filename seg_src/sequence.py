@@ -162,8 +162,12 @@ def load_tracked_masks(dir, opt_params): # TODO DANIEL
 
 
 def track_sequence():
-    # TODO Add path params to override config
-    subprocess.call(['java', '-jar', 'lib\\Lineage_Mapper\\Lineage_Mapper.jar'], shell=True)
+    """
+    Calls Lineage Mapper to track connected components
+    """
+    args = []
+    #args = ['inputDirectory', '', 'outputDirectory', ''] # Enables overriding arguments such as input/output paths (without changing config)
+    subprocess.call(['java', '-jar', 'lib\Lineage_Mapper\Lineage_Mapper.jar'] + args, shell=True)
 
 if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
