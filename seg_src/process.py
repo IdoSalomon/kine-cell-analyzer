@@ -62,6 +62,7 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
     return filtered
 
 def get_connected_components(img, dst_path, grayscale=True, debug=True):
+
     img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
     img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY)[1]  # ensure binary
     img = np.uint8(img)
@@ -69,58 +70,15 @@ def get_connected_components(img, dst_path, grayscale=True, debug=True):
     connectivity = 4
     labels = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
 
-    if grayscale:
-        io_utils.save_img(labels[1], dst_path, uint8=False)  # TODO Remove
-        return labels
-    else:
-        # Map component labels to hue val
-        label_hue = np.uint8(179 * labels[1] / np.max(labels[1]))
-        blank_ch = 255 * np.ones_like(label_hue)
-        labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
-
-        # cvt to BGR for display
-        labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
-
-    # set bg label to black
-    labeled_img[label_hue == 0] = 0
-
-    io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\" + name + ".tif") # TODO Remove
+    io_utils.save_img(labels[1], dst_path)  # TODO Remove
 
     return labels
-    #cv2.imshow('labeled.png', labeled_img)
 
-
-
-def filter_far_cells(thresh, filter_size=0, debug = True):
+def filter_far_cells(thresh, dev_thresh=1, debug = True):
     # Find connected components
     connectivity = 4
-    """thresh = thresh.astype(np.uint8)
-    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=connectivity)
-    init_components = nb_components
-    filtered_components = 0
-
-    # Remove background
-    sizes = stats[1:, -1]
-    nb_components -= 1
-
-    # Minimum size of particles to keep
-    min_size = 3
-
-    # Despeckle
-    despeckled = np.zeros(output.shape)
-    for i in range(0, nb_components):
-        if sizes[i] >= min_size:
-            filtered_components += 1
-            despeckled[output == i + 1] = 255
-
-    # Descpeckle
-    despeckled = despeckled.astype(np.uint8)"""
-
-    # Find connected components
     thresh = thresh.astype(np.uint8)
     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=connectivity)
-    labels = output[1]
-
     init_components = nb_components
     filtered_components = init_components
 
@@ -129,14 +87,12 @@ def filter_far_cells(thresh, filter_size=0, debug = True):
     mean = np.mean(area)
     std = np.std(area)
 
-    if filter_size == 0:
-        filter_size = mean - 1.0 * std
+    filter_size = mean - dev_thresh * std # dev_thresh should be 1 for round, 1.1 for long
 
     # Remove background
     sizes = stats[1:, -1]
     nb_components -= 1
-
-    min_size = filter_size # should be 1 for round, 1.1 for long
+    min_size = filter_size
 
     # Filter
     filtered = np.zeros(output.shape)
@@ -182,7 +138,7 @@ def pre_filter_far_cells(thresh, despeckle_size=0, debug=True):
     return filtered
 
 
-def process_aux_channels(img, despeckle_size=1, kernel=np.ones((2, 2), np.uint8), filter_size=0):
+def process_aux_channels(img, despeckle_size=1, kernel=np.ones((2, 2), np.uint8), dev_thresh=0):
     kernel = np.ones((2, 2), np.uint8)
 
     # step 1 - filter noise
@@ -193,14 +149,14 @@ def process_aux_channels(img, despeckle_size=1, kernel=np.ones((2, 2), np.uint8)
     filtered = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel, iterations=1)
 
     # step 3 - filter far/dead cells
-    filtered = filter_far_cells(filtered, filter_size=filter_size)
+    filtered = filter_far_cells(filtered, dev_thresh=dev_thresh)
 
     return filtered
 
-def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, filter_size=0, file_name=0, debug=True):
+def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, file_name=0, debug=True):
     res_img = ps.prec_sparse(img, opt_params, ker_params, debug)
     red_channel = res_img[:, :, 0]
-    return gen_phase_mask(red_channel, img, despeckle_size=despeckle_size, filter_size=filter_size, file_name=file_name)
+    return gen_phase_mask(red_channel, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name)
 
 
 def gen_gfp_mask(raw_threshold, orig_img, debug=True):
@@ -268,5 +224,5 @@ if __name__ == "__main__":
     #ker_params = KerParams(ring_rad=10, ring_wid=0.05, ker_rad=10, zetap=0.8, dict_size=20)
 
     #seg_phase(iu.load_img("images\\seq_nec\\Scene1Interval043_PHASE.png", 0.3, False, False), ker_params=ker_params, opt_params=opt_params, despeckle_size=3, filter_size=0, file_name="gen_phase_mask.png")
-    seg_phase(iu.load_img("images\\seq_nec\\Scene1Interval029_PHASE.png", 0.5, False, False), ker_params=ker_params, opt_params=opt_params, despeckle_size=3, filter_size=0, file_name="gen_phase_mask.png")
+    seg_phase(iu.load_img("images\\seq_nec\\Scene1Interval029_PHASE.png", 0.5, False, False), ker_params=ker_params, opt_params=opt_params, despeckle_size=3, dev_thresh=0, file_name="gen_phase_mask.png")
     #seg_phase(iu.load_img("images\\small.png", 1, False, False), ker_params=ker_params, opt_params=opt_params, despeckle_size=3, filter_size=0, file_name="gen_phase_mask.png")

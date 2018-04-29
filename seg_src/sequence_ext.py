@@ -225,11 +225,6 @@ def analyze_channels(channels):
                             break
 
 
-def histogram_equalize(img):
-    img_cdf, bin_centers = exposure.cumulative_distribution(img)
-    return np.interp(img, bin_centers, img_cdf)
-
-
 def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.04): # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
