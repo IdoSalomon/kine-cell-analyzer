@@ -8,7 +8,7 @@ import img_utils as iu
 from prec_params import KerParams, OptParams
 
 
-def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=True):
+def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=False):
     dbgImgs = []
     if debug:
         dbgImgs += [(restored, 'initial')]
@@ -70,7 +70,7 @@ def get_connected_components(img, dst_path, grayscale=True, debug=True):
     labels = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
 
     if grayscale:
-        io_utils.save_img(labels[1], dst_path, float=True)  # TODO Remove
+        io_utils.save_img(labels[1], dst_path, uint8=False)  # TODO Remove
         return labels
     else:
         # Map component labels to hue val
