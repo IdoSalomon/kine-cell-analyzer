@@ -231,7 +231,7 @@ def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.04): # T
     cell = seq_frames[frame_id].cells[label]
     # cell_mean = np.mean(cell.pixel_values[channel])
     cell_area = cell.pixel_values[channel].size
-    cell_colored = np.sum(cell.pixel_values[channel]) / 255
+    cell_colored = np.sum(cell.pixel_values[channel]) / 256
     cell_intensity = cell_colored / cell_area
 
     if cell_intensity > thresh_change:
