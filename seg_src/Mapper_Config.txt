@@ -1,6 +1,6 @@
-inputDirectory: images\seq_u937_nec\concomps\
-filenamePrefix: Scene1Interval{iii}.tif
-outputDirectory: images\seq_u937_nec\concomps\track\
+inputDirectory: images\L136\A2\4\concomps\
+filenamePrefix: L136_A2_4_{iii}.tif
+outputDirectory: images\L136\A2\4\concomps\track\
 outputPrefix: trk-
 weightCellOverlap: 1
 weightCentroidsDistance: 0.5

@@ -6,6 +6,7 @@ import cv2
 import cell
 import img_utils
 import img_utils as iu
+import misc_params
 import sequence_ext as ext
 import numpy as np
 import prec_sparse as ps
@@ -13,19 +14,25 @@ import process as pr
 import frame as fr
 import io_utils
 import subprocess
+import cell as cl
 
-#seq_paths = {} # Paths to all sequence images
+seq_paths = {} # Paths to all sequence images
 from prec_params import KerParams, OptParams
 
 seq_frames = {} # dictionary <int,Frame> that holds all frames in sequence by number
 
 label_colors = {} # dictionary <int, int> that holds constant colors for each labelled cells
 
-channel_types = ["GFP", "PHASE", "TxRed", "TRANS"] # different channels in sequence TODO turn to user input
+channel_types = ["GFP", "FITC", "fitc", "pi", "PI", "PHASE", "phase", "TxRed", "TRANS", "trans"] # different channels in sequence TODO turn to user input
 
-seg_channel_types = ["PHASE", "TRANS"] # different channels in sequence to segment TODO turn to user input
+seg_channel_types = ["PHASE", "TRANS", "phase"] # different channels in sequence to segment TODO turn to user input
 
-aux_channel_types = ["GFP", "TxRed"]
+aux_channel_types = ["GFP", "TxRed", "fitc", "FITC", "PI", "pi"]
+
+cells_frames = {} # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
+
+cells_trans = {} # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
+
 
 def create_stack(chan_paths, opt_params):
     channels = {}
@@ -47,7 +54,7 @@ def create_masks(channels, ker_params, opt_params, interval, debug):
     chans = {}
     for channel in channels:
         if channel in seg_channel_types:
-            chans[channel] = pr.seg_phase(channels[channel], despeckle_size=10, dev_thresh=1, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
+            chans[channel] = pr.seg_phase(channels[channel], despeckle_size=3, dev_thresh=1.5, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
     return chans
 
 
@@ -89,8 +96,7 @@ def load_label_colors():
         label_colors[i] = random.randint(1, 255)
 
 
-def load_sequence(dir, ker_params, opt_params, dir_mask, comps_dir):
-    seq_paths = io_utils.load_paths(dir)
+def load_sequence(dir, ker_params, opt_params, comps_dir):
     for interval in seq_paths:
         frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, debug = False, comps_dir=comps_dir)
 
@@ -155,35 +161,148 @@ def track_sequence():
     #args = ['inputDirectory', '', 'outputDirectory', ''] # Enables overriding arguments such as input/output paths (without changing config)
     subprocess.call(['java', '-jar', 'lib\Lineage_Mapper\Lineage_Mapper.jar'] + args, shell=True)
 
+
+def get_tracked_cells(tracked_img, images, frame_id):
+    """
+    Loads cells from tracked image
+    Parameters
+    ----------
+    tracked_img : ndarray
+        2D array of tracked image
+    images : dict<str, ndarray>
+        dictionary that holds channel images by channel name
+    frame_id : str
+        ID of frame
+    Returns
+    -------
+    cells : dict<int, Cell>
+        dictionary of cells by cell ID
+    """
+
+    cells = {}
+
+    # Find cells in tracked image
+    labels = np.unique(tracked_img)
+
+    # Create cell for each label in tracked image
+    for label in labels:
+        channels_pixels = {}
+        # Find pixel values for each channel
+        for channel in images:
+            channels_pixels[channel] = (images[channel])[tracked_img == label]
+        first_elemnt = np.argwhere(tracked_img == label)[0]
+        centroid = (first_elemnt[1], first_elemnt[0]) # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
+        cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
+        cells[label] = cell
+
+        # Assign frame to global label
+        if label not in cells_frames:
+            cells_frames[label] = [frame_id]
+        else:
+            cells_frames[label].append(frame_id)
+
+    return cells
+
+def load_tracked_mask(tracked_path, opt_params):
+    """
+    Loads tracked image.
+
+    Parameters
+    ----------
+    tracked_path : str
+        path to tracked image file
+    opt_params : OptParams
+        optimization parameters
+
+    Returns
+    -------
+        img : ndarray
+            2D array of tracked image
+    """
+
+    if tracked_path and opt_params:
+        return img_utils.load_img(tracked_path[0], 1, False, False, float=False, normalize=False)
+
+
+def load_tracked_frame(interval, tracked_paths, opt_params, seq_paths):
+    """
+    Loads frame.
+
+    Parameters
+    ----------
+    interval : str
+        interval name
+    tracked_paths : list
+        paths to tracked images
+    opt_params : OptParams
+        optimization parameters
+    seq_paths : list
+        paths to sequence images
+
+    Returns
+    -------
+    frame : Frame
+        Loaded frame
+    """
+    if interval.startswith("trk-"):
+        interval = interval[4:]
+    frame_id = io_utils.extract_num(interval, misc_params.FileFormat.SCENE)
+    images = create_stack(seq_paths[interval], opt_params=opt_params) # original channels
+    tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params) # image after tracking
+    cells = get_tracked_cells(tracked_img=tracked_img, images=images, frame_id=frame_id) # image's cell representation
+
+    frame = seq_frames[frame_id]
+    frame.tracked_img = tracked_img
+    frame.cells = cells
+
+    print("Loaded tracked frame {}\n".format(interval))
+
+
+def load_tracked_sequence(dir_tracked):
+    tracked_paths = io_utils.load_paths(dir_tracked)
+    for interval in tracked_paths:
+        frame = load_tracked_frame(interval, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths)
+
+        seq_frames[frame.id] = frame
+
+    print("Finished loading sequence!\n")  # DEBUG
+
+
 if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
-    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=0.5,
-                            max_itr=100, opt_tolr=np.finfo(float).eps)
-
+    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=2, epsilon=3, gamma=3, img_scale=0.5,
+                           max_itr=100, opt_tolr=np.finfo(float).eps)
+    dir = "images\\L136\\A2\\4"
+    comps_dir = "images\\L136\\A2\\4\\concomps"
     # load_tracked_masks("images\\seq_nec\\tracked")
     print("\nStarted sequence loading\n")
 
-    load_sequence("images\\seq_u937_nec", ker_params=ker_params, opt_params=opt_params,comps_dir = "images\\seq_u937_nec\\concomps", dir_mask="images\\seq_u937_nec\\concomps\\track")
+    seq_paths = io_utils.load_paths(dir)
+
+    #load_sequence("images\\seq_nec", ker_params=ker_params, opt_params=opt_params,comps_dir="images\\seq__nec\\concomps", dir_mask="images\\seq_nec\\concomps\\track")
+
+    #load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir)
 
     print("\nFinished sequence tracking\n")
 
     print("\nStarted sequence tracking\n")
 
-    track_sequence()
+    #track_sequence()
 
     print("\nFinished sequence tracking\n")
 
     print("\nStarted loading tracked sequence\n")
 
-    ext.load_sequence_ext("images\\seq_apo", opt_params=opt_params, dir_tracked="images\\seq_apo\\concomps\\track")
+    load_tracked_sequence(dir_tracked="images\\L136\\A2\\4\\concomps\\track")
+    #ext.load_sequence_ext("images\\seq_apo", opt_params=opt_params, dir_tracked="images\\seq_apo\\concomps\\track")
 
     print("\nFinished loading tracked sequence\n")
 
-    ext.analyze_channels(["TxRed", "GFP"])
+    #ext.analyze_channels(["TxRed", "GFP"])
 
     print("Finished analyze_channels\n")
 
-    ext.debug_channels("dbg\\chan_analysis_apo", ["TxRed", "GFP"])
+    #ext.debug_channels("dbg\\chan_analysis_apo", ["TxRed", "GFP"])
 
     print("Finished debug_channels\n")
     

@@ -154,7 +154,7 @@ def process_aux_channels(img, despeckle_size=1, kernel=np.ones((2, 2), np.uint8)
     return filtered
 
 def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, file_name=0, debug=True):
-    res_img = ps.prec_sparse(img, opt_params, ker_params, debug)
+    res_img = ps.prec_sparse(img, opt_params, ker_params, True)
     red_channel = res_img[:, :, 0]
     return gen_phase_mask(red_channel, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name)
 

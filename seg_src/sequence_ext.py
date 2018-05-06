@@ -8,6 +8,8 @@ import cell
 import img_utils
 import img_utils as iu
 import numpy as np
+
+import misc_params
 import prec_sparse as ps
 import process as pr
 import frame as fr
@@ -18,11 +20,15 @@ from prec_params import KerParams, OptParams
 
 seq_frames = {} # dictionary <int,Frame> that holds all frames in sequence by number
 
-channel_types = ["GFP", "TxRed"] # different channels in sequence TODO turn to user input
+channel_types = ["GFP", "TxRed", "fitc", "PI"] # different channels in sequence TODO turn to user input
 
 cells_frames = {} # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
 
 cells_trans = {} # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
+
+background_gfp = [] # GFP background to subtract from next frames TODO TEMPORARY
+
+
 
 def create_stack(chan_paths, opt_params):
     """
@@ -138,7 +144,7 @@ def load_frame_ext(interval, tracked_paths, opt_params, seq_paths):
         Loaded frame
     """
 
-    frame_id = io_utils.extract_num(interval)
+    frame_id = io_utils.extract_num(interval, misc_params.FileFormat.SCENE)
     images = create_stack(seq_paths[interval], opt_params=opt_params) # original channels
     tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params) # image after tracking
     cells = get_cells_ext(tracked_img=tracked_img, images=images, frame_id=frame_id) # image's cell representation
@@ -164,6 +170,10 @@ def load_sequence_ext(dir, opt_params, dir_tracked):
 
     """
     seq_paths = io_utils.load_paths(dir)
+
+    global background_gfp
+    #background_gfp = img_utils.load_img(seq_paths["Scene1Interval001"][0], opt_params.img_scale, False, False) # TODO REMOVE
+
     tracked_paths = io_utils.load_paths(dir_tracked)
     for interval in seq_paths:
         frame = load_frame_ext(interval, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths)
@@ -174,8 +184,13 @@ def load_sequence_ext(dir, opt_params, dir_tracked):
 
 
 def seg_aux_channels(img, chan_type):
-    img = iu.im2double(img)
+    #img = iu.im2double(img)
+    if chan_type == "GFP":
+        #img = cv2.subtract(img, cv2.GaussianBlur(background_gfp, (5,5), 0)) # TODO REMOVE
+        img = cv2.GaussianBlur(img, (5,5), 0)
+
     img = iu.bg_removal(img)
+    img[img < 0] = 0
 
     # normalize for threshold
     img = cv2.normalize(img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
@@ -211,7 +226,7 @@ def analyze_channels(channels):
         frame_bg = {}  # dictionary <img, float, float> that holds the current frame channel + mean background
 
         # iterate over first frame identified cells
-        for cell in seq_frames[1].cells:
+        for cell in cells_frames:
             if cell != 0: # skip background label
                 # iterate over next frames
                 for frame_id in range(2, max(seq_frames)):
@@ -225,7 +240,7 @@ def analyze_channels(channels):
                             break
 
 
-def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.04): # TODO change threshold
+def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.03): # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
@@ -264,7 +279,7 @@ def debug_channels(dir, channels):
                     if cells_trans[cell][channel] <= frame_id:
                         cell_mask = seq_frames[frame_id].tracked_img == cell
                         dbg_frame[cell_mask] = 255
-                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 190, 2)
+                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 190, 2)
             path = dir + "\\" + channel + str(frame_id) + ".png"
             thresh_path = dir + "\\" + channel + str(frame_id) + "_THRESH.png"
             io_utils.save_img(dbg_frame, path, uint8=True)
@@ -279,7 +294,7 @@ if __name__ == "__main__":
 
     # load_tracked_masks("images\\seq_nec\\tracked")
     #
-    load_sequence_ext("images\\seq_apo", opt_params=opt_params, dir_tracked="images\\seq_apo\\concomps\\track")
+    """load_sequence_ext("images\\seq_nec", opt_params=opt_params, dir_tracked="images\\seq_nec\\concomps\\track")
 
     analyze_channels(["TxRed", "GFP"])
 
@@ -287,6 +302,16 @@ if __name__ == "__main__":
 
     debug_channels("dbg\\chan_analysis_apo", ["TxRed", "GFP"])
 
-    print ("Finished debug_channels\n")
+    print ("Finished debug_channels\n")"""
+
+    load_sequence_ext("images\\L136\\A2\\4", opt_params=opt_params, dir_tracked="images\\L136\\A2\\4\\concomps\\track")
+
+    analyze_channels(["fitc", "PI"])
+
+    print("Finished analyze_channels\n")
+
+    debug_channels("dbg\\L136\\A2\\4", ["fitc", "PI"])
+
+    print("Finished debug_channels\n")
 
 #save_con_comps()

@@ -12,7 +12,7 @@ from scipy import misc
 from debug_utils import save_debug_fig
 
 
-def prec_sparse(img, opt_params, ker_params, debug):
+def prec_sparse(img, opt_params, ker_params, debug=True):
     """
     Creates reconditioned image
 
@@ -47,8 +47,8 @@ def prec_sparse(img, opt_params, ker_params, debug):
     sel_basis = np.zeros(num_basis) # init basis array
     rimg = img.copy() # initial residual image
     img_dim = img_utils.get_dim(img) # image dimensions
-    resd_img = np.zeros((img_dim[0], img_dim[1], num_basis)) # 3d array to hold residual images
-    img_proc = np.zeros((img_dim[0], img_dim[1], num_basis)) # 3d array to hold proc image
+    resd_img = np.zeros((img_dim[0], img_dim[1], num_basis + 1)) # 3d array to hold residual images
+    img_proc = np.zeros((img_dim[0], img_dim[1], num_basis + 1)) # 3d array to hold proc image
 
     # Iterate over all basis
     for sel_ind in range(num_basis):
@@ -87,11 +87,10 @@ def prec_sparse(img, opt_params, ker_params, debug):
             break
 
     ndep = img_proc.shape[2]
-    img_proc[:, :, ndep: num_basis] = 0
-
+    # img_proc[:, :, ndep: num_basis] =  TODO RESTORE
+    img_proc[:,:,2] = 0 # TODO REMOVE
     # Save final BGR image
     bgr = cv2.normalize(img_proc, None, 0, 255, cv2.NORM_MINMAX)
     cv2.imwrite("dbg\\restored_image.png", bgr)
 
     return img_proc
-
