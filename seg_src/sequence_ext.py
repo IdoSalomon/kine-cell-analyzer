@@ -222,7 +222,7 @@ def analyze_channels(channels):
     channels : str
         a string representation of the analyzed channeled, e.g 'GFP'
     """
-    for channel in channels: # FIXME This kills performance
+    for channel in channels:
         frame_bg = {}  # dictionary <img, float, float> that holds the current frame channel + mean background
 
         # iterate over first frame identified cells
@@ -244,10 +244,14 @@ def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.03): # T
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
+
+    pixels = cell.pixel_values[channel]
     # cell_mean = np.mean(cell.pixel_values[channel])
-    cell_area = cell.pixel_values[channel].size
-    cell_colored = np.sum(cell.pixel_values[channel]) / 256
+    cell_area = pixels.size
+    #cell_colored = np.sum(pixels) / 256
+    cell_colored = pixels[pixels > 15].size
     cell_intensity = cell_colored / cell_area
+    #cell_intensity = cell_colored
 
     if cell_intensity > thresh_change:
         return True
@@ -279,7 +283,7 @@ def debug_channels(dir, channels):
                     if cells_trans[cell][channel] <= frame_id:
                         cell_mask = seq_frames[frame_id].tracked_img == cell
                         dbg_frame[cell_mask] = 255
-                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 190, 2)
+                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 190, 2)
             path = dir + "\\" + channel + str(frame_id) + ".png"
             thresh_path = dir + "\\" + channel + str(frame_id) + "_THRESH.png"
             io_utils.save_img(dbg_frame, path, uint8=True)

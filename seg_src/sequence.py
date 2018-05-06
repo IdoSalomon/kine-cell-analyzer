@@ -54,7 +54,7 @@ def create_masks(channels, ker_params, opt_params, interval, debug):
     chans = {}
     for channel in channels:
         if channel in seg_channel_types:
-            chans[channel] = pr.seg_phase(channels[channel], despeckle_size=3, dev_thresh=1.5, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
+            chans[channel] = pr.seg_phase(channels[channel], despeckle_size=1, dev_thresh=2, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
     return chans
 
 
@@ -83,7 +83,13 @@ def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir,  debug=Fa
     # Generate and save connected components
     for channel in seg_channel_types:
         if channel in masks:
-            pr.get_connected_components(masks[channel], grayscale=True, dst_path=comps_dir + '\\' + interval + "_" + channel + ".tif", debug=debug)
+            con_comp = pr.get_connected_components(masks[channel], grayscale=True, dst_path=comps_dir + '\\' + interval + ".tif", debug=debug)
+            b = cv2.normalize(con_comp[1], None, 0, 255, cv2.NORM_MINMAX)
+            g = cv2.normalize(images["fitc"], None, 0, 255, cv2.NORM_MINMAX)
+            r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
+            vis = np.dstack((b, g, r)) # TODO change so it will work for seq_nec
+            vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
+            cv2.imwrite(comps_dir + '\\' + 'vis\\' + interval + ".tif", vis)
 
     frame = fr.Frame(id=io_utils.extract_num(interval), title=interval, images=images, masks=masks)
     print("Loaded frame {}\n".format(interval))
@@ -270,24 +276,26 @@ def load_tracked_sequence(dir_tracked):
 
 if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
-    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=2, epsilon=3, gamma=3, img_scale=0.5,
+    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=3, epsilon=3, gamma=3, img_scale=0.5,
                            max_itr=100, opt_tolr=np.finfo(float).eps)
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
+
+    """dir = "images\\seq_nec"
+    comps_dir = "images\\seq_nec\\concomps"""
+
     # load_tracked_masks("images\\seq_nec\\tracked")
     print("\nStarted sequence loading\n")
 
     seq_paths = io_utils.load_paths(dir)
 
-    #load_sequence("images\\seq_nec", ker_params=ker_params, opt_params=opt_params,comps_dir="images\\seq__nec\\concomps", dir_mask="images\\seq_nec\\concomps\\track")
-
-    #load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir)
+    load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir)
 
     print("\nFinished sequence tracking\n")
 
     print("\nStarted sequence tracking\n")
 
-    #track_sequence()
+    track_sequence()
 
     print("\nFinished sequence tracking\n")
 

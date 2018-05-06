@@ -8,7 +8,7 @@ import img_utils as iu
 from prec_params import KerParams, OptParams
 
 
-def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=False):
+def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=True):
     dbgImgs = []
     if debug:
         dbgImgs += [(restored, 'initial')]
@@ -20,7 +20,7 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
     restored = np.uint8(restored)
     orig_img = np.uint8(orig_img)
 
-    kernel = np.ones((2, 2), np.uint8)
+    kernel = np.ones((3, 3), np.uint8)
 
     # step 1 - threshold
     tmp, threshold = cv2.threshold(restored, 0, 255, cv2.THRESH_BINARY)
@@ -33,7 +33,7 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
         dbgImgs += [(filtered, 'step 2 - pre-filter')]
 
     # step 3 - dilate
-    dilated = cv2.dilate(filtered,kernel,iterations = 1)
+    dilated = cv2.dilate(filtered,kernel,iterations=1)
     dilated = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel, iterations=1)
 
     if debug:

@@ -1,12 +1,12 @@
 inputDirectory: images\L136\A2\4\concomps\
-filenamePrefix: L136_A2_4_{iii}.tif
+filenamePrefix: L136_A2_4_{iii}_phase.tif
 outputDirectory: images\L136\A2\4\concomps\track\
 outputPrefix: trk-
 weightCellOverlap: 1
 weightCentroidsDistance: 0.5
 weightCellSize: 0.2
 maxCentroidsDistance: 50
-minCellLife: 32
+minCellLife: 5
 cellDeathDeltaCentroid: 10
 cellDensityAffectsCI: true
 borderCellAffectsCI: true
@@ -16,6 +16,6 @@ daughterAspectRatioSimilarity: 0.7
 motherCircularityIndex: 0.3
 numFramesToCheckCircularity: 5
 enableCellDivision: false
-minCellArea: 100
+minCellArea: 50
 minFusionOverlap: 0.2
 enableCellFusion: false
