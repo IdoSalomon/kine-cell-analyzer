@@ -1,4 +1,5 @@
 import cv2
+import cython as cython
 import numpy as np
 import debug_utils as dbg
 import img_utils
@@ -7,6 +8,96 @@ import prec_sparse as ps
 import img_utils as iu
 from prec_params import KerParams, OptParams
 
+"""
+%load_ext cython
+%%cython -a
+import cython
+
+@cython.boundscheck(False)
+cpdef unsigned char[:, :] threshold_fast(int T, unsigned char[:, :] image):
+    # set the variable extension types
+    cdef int x, y, w, h
+
+    # grab the image dimensions
+    h = image.shape[0]
+    w = image.shape[1]
+
+    # loop over the image
+    for y in range(0, h):
+        for x in range(0, w):
+            # threshold the pixel
+            image[y, x] = 255 if image[y, x] >= T else 0
+
+    # return the thresholded image
+    return image
+"""
+
+def padding_for_kernel(kernel):
+    """ Return the amount of padding needed for each side of an image.
+
+    For example, if the returned result is [1, 2], then this means an
+    image should be padded with 1 extra row on top and bottom, and 2
+    extra columns on the left and right.
+    """
+    # Slice to ignore RGB channels if they exist.
+    image_shape = [kernel[0], kernel[1]]
+    # We only handle kernels with odd dimensions so make sure that's true.
+    # (The "center" pixel of an even number of pixels is arbitrary.)
+    assert all((size % 2) == 1 for size in image_shape)
+    return [(size - 1) // 2 for size in image_shape]
+
+def remove_padding(image, kernel):
+    inner_region = []  # A 2D slice for grabbing the inner image region
+    for pad in padding_for_kernel(kernel):
+        slice_i = slice(None) if pad == 0 else slice(pad, -pad)
+        inner_region.append(slice_i)
+    return image[inner_region]
+
+def add_padding(image, kernel):
+    h_pad, w_pad = padding_for_kernel(kernel)
+    return np.pad(image, ((h_pad, h_pad), (w_pad, w_pad)), mode='constant', constant_values=0)
+
+def window_slice(center, kernel):
+    r, c = center
+    r_pad, c_pad = padding_for_kernel(kernel)
+    # Slicing is (inclusive, exclusive) so add 1 to the stop value
+    return [slice(r-r_pad, r+r_pad+1), slice(c-c_pad, c+c_pad+1)]
+
+
+def find_borders(labels, ker):
+    label_img = labels[1]
+    stats = labels[2]
+
+    # Get original image dimensions
+    h = label_img.shape[0]
+    w = label_img.shape[1]
+
+    # Pad labels image (for sliding window)
+    pad_labels = add_padding(label_img, ker)
+    # Get padding dimensions (for index mapping)
+    pad_h = (int)((pad_labels.shape[0] - h) / 2)
+    pad_w = (int)((pad_labels.shape[1] - w) / 2)
+
+    borders = np.zeros((h,w))
+
+    # Loop over the image, pixel by pixel
+    for y in range(pad_h, h + pad_h):
+        for x in range(pad_w, w + pad_w):
+            if pad_labels[y, x] == 0:
+                ker_slice = pad_labels[window_slice(center=(y,x), kernel=ker)] # window
+                uniques = np.unique(ker_slice)
+                uniques = uniques[uniques != 0] # remove background label
+                num_uniques = uniques.size
+                pos = False
+                # Avoid decimating sparsely detected cells
+                for i in range(num_uniques):
+                    if stats[uniques[i], cv2.CC_STAT_AREA] > 20:
+                        pos = True
+                # Add to mask if is border between large connected components
+                if num_uniques > 1 and pos:
+                    borders[y - pad_h, x - pad_w] = 255
+
+    return borders
 
 def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=True):
     dbgImgs = []
@@ -153,14 +244,48 @@ def process_aux_channels(img, despeckle_size=1, kernel=np.ones((2, 2), np.uint8)
 
     return filtered
 
+
+def calc_borders(restored_img, img, despeckle_size, ker):
+    #normailize image to unit8 range: 0-255
+    restored = cv2.normalize(restored_img, None, 0, 255, cv2.NORM_MINMAX)
+    orig_img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
+
+    restored = np.uint8(restored)
+
+    # step 1 - threshold
+    tmp, threshold = cv2.threshold(restored, 0, 255, cv2.THRESH_BINARY)
+
+    # step 2 - filter far/dead cells
+    filtered = pre_filter_far_cells(threshold, despeckle_size)
+
+    #filtered = cv2.morphologyEx(filtered, cv2.MORPH_CLOSE, (3,3), iterations=1)
+
+    filtered = np.uint8(filtered)
+
+    connectivity = 4
+    labels = cv2.connectedComponentsWithStats(filtered, connectivity=connectivity)
+
+    borders = find_borders(labels, ker)
+
+    # TODO Add masks from proc if it doesn't change connected components (extends single cells). Figure out solution for oversegmented cells.
+
+    io_utils.save_img(borders, "dbg\\borders.png")  # TODO Remove
+
+    return borders
+
+
 def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, file_name=0, debug=False):
     additive_zero = ps.prec_sparse(img, opt_params, ker_params, debug)[:, :, 0]
     ker_params_first = KerParams(ring_rad=ker_params.ring_rad, ring_wid=ker_params.ring_wid, ker_rad=ker_params.ker_rad + 1, zetap=ker_params.zetap, dict_size=ker_params.dict_size)
-    next = ps.prec_sparse(img, opt_params, ker_params_first, True)
+    opt_params_first = OptParams(smooth_weight=opt_params.smooth_weight, spars_weight=opt_params.spars_weight, sel_basis=opt_params.sel_basis + 1, epsilon=opt_params.epsilon, gamma=opt_params.gamma, img_scale=opt_params.img_scale, max_itr=opt_params.max_itr, opt_tolr=opt_params.opt_tolr)
+    next = ps.prec_sparse(img, opt_params_first, ker_params_first, True)
     next_first = next[:, :, 1]
     next = next[:, :, 0]
 
     additive_zero = cv2.add(additive_zero, next)
+
+    borders = calc_borders(additive_zero, img, despeckle_size, ker=(5, 5))
+
     post_proc = gen_phase_mask(additive_zero, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name)
 
     next_first = cv2.normalize(next_first, None, 0, 255, cv2.NORM_MINMAX)
@@ -176,18 +301,24 @@ def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, f
 
     #next_first_mask = filter_far_cells(next_first_mask, dev_thresh=dev_thresh, debug=debug)
 
-    sub_next = cv2.subtract(post_proc, np.uint8(next_first_mask))
 
+    sub_next = cv2.subtract(post_proc, np.uint8(next_first_mask))
     sub_next = pre_filter_far_cells(np.uint8(sub_next), despeckle_size=3, debug=debug)
     sub_next = filter_far_cells(np.uint8(sub_next), dev_thresh=1.8, debug=debug)
 
-    io_utils.save_img(sub_next, "dbg\\test_sub.png")  # TODO Remove
-    io_utils.save_img(post_proc, "dbg\\test_proc.png")  # TODO Remove
-    io_utils.save_img(next_first_mask, "dbg\\test_next_first_mask.png")  # TODO Remove
-    io_utils.save_img(next_first, "dbg\\test_next_first.png")  # TODO Remove
+    sub_filter = cv2.subtract(post_proc, np.uint8(borders))
+
+    sub_filter = pre_filter_far_cells(sub_filter, despeckle_size=3)
+    sub_filter = filter_far_cells(sub_filter, dev_thresh=1.8)
+
+    io_utils.save_img(sub_next, "dbg\\test_sub.png", uint8=True)  # TODO Remove
+    io_utils.save_img(sub_filter, "dbg\\test_sub_filter.png", uint8=True)  # TODO Remove
+    io_utils.save_img(post_proc, "dbg\\test_proc.png", uint8=True)  # TODO Remove
+    io_utils.save_img(next_first_mask, "dbg\\test_next_first_mask.png", uint8=True)  # TODO Remove
+    io_utils.save_img(next_first, "dbg\\test_next_first.png", uint8=True)  # TODO Remove
 
 
-    return sub_next
+    return sub_filter
 
 
 def gen_gfp_mask(raw_threshold, orig_img, debug=True):
