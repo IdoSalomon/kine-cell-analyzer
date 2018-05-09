@@ -275,8 +275,8 @@ def load_tracked_sequence(dir_tracked):
 
 
 if __name__ == "__main__":
-    ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=2, zetap=0.8, dict_size=20)
-    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=3, epsilon=3, gamma=3, img_scale=0.5,
+    ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=1, zetap=0.8, dict_size=20)
+    opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=2, epsilon=3, gamma=3, img_scale=0.5,
                            max_itr=100, opt_tolr=np.finfo(float).eps)
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"

@@ -34,7 +34,7 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
 
     # step 3 - dilate
     dilated = cv2.dilate(filtered,kernel,iterations=1)
-    dilated = cv2.morphologyEx(dilated, cv2.MORPH_CLOSE, kernel, iterations=1)
+    #dilated = cv2.morphologyEx(filtered, cv2.MORPH_CLOSE, kernel, iterations=2)
 
     if debug:
         dbgImgs += [(dilated, 'step 3 - dilate')]
@@ -153,10 +153,41 @@ def process_aux_channels(img, despeckle_size=1, kernel=np.ones((2, 2), np.uint8)
 
     return filtered
 
-def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, file_name=0, debug=True):
-    res_img = ps.prec_sparse(img, opt_params, ker_params, True)
-    red_channel = res_img[:, :, 0]
-    return gen_phase_mask(red_channel, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name)
+def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, file_name=0, debug=False):
+    additive_zero = ps.prec_sparse(img, opt_params, ker_params, debug)[:, :, 0]
+    ker_params_first = KerParams(ring_rad=ker_params.ring_rad, ring_wid=ker_params.ring_wid, ker_rad=ker_params.ker_rad + 1, zetap=ker_params.zetap, dict_size=ker_params.dict_size)
+    next = ps.prec_sparse(img, opt_params, ker_params_first, True)
+    next_first = next[:, :, 1]
+    next = next[:, :, 0]
+
+    additive_zero = cv2.add(additive_zero, next)
+    post_proc = gen_phase_mask(additive_zero, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name)
+
+    next_first = cv2.normalize(next_first, None, 0, 255, cv2.NORM_MINMAX)
+
+    tmp, next_first_mask = cv2.threshold(next_first, 1, 255, cv2.THRESH_BINARY)
+
+    #next_first_mask = cv2.normalize(next_first_mask, None, 0, 255, cv2.NORM_MINMAX)
+
+
+    next_first_mask = pre_filter_far_cells(np.uint8(next_first_mask), despeckle_size=1, debug=debug)
+    next_first_mask = cv2.morphologyEx(next_first_mask, cv2.MORPH_CLOSE, (3, 3), iterations=3)
+
+
+    #next_first_mask = filter_far_cells(next_first_mask, dev_thresh=dev_thresh, debug=debug)
+
+    sub_next = cv2.subtract(post_proc, np.uint8(next_first_mask))
+
+    sub_next = pre_filter_far_cells(np.uint8(sub_next), despeckle_size=3, debug=debug)
+    sub_next = filter_far_cells(np.uint8(sub_next), dev_thresh=1.8, debug=debug)
+
+    io_utils.save_img(sub_next, "dbg\\test_sub.png")  # TODO Remove
+    io_utils.save_img(post_proc, "dbg\\test_proc.png")  # TODO Remove
+    io_utils.save_img(next_first_mask, "dbg\\test_next_first_mask.png")  # TODO Remove
+    io_utils.save_img(next_first, "dbg\\test_next_first.png")  # TODO Remove
+
+
+    return sub_next
 
 
 def gen_gfp_mask(raw_threshold, orig_img, debug=True):

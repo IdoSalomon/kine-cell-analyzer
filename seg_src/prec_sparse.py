@@ -87,10 +87,12 @@ def prec_sparse(img, opt_params, ker_params, debug=True):
             break
 
     ndep = img_proc.shape[2]
-    img_proc[:, :, ndep: num_basis] = 0
+    img_proc[:, :, ndep: num_basis + 1] = 0
     #img_proc[:,:,2] = 0 # TODO REMOVE
-    # Save final BGR image
-    bgr = cv2.normalize(img_proc, None, 0, 255, cv2.NORM_MINMAX)
-    cv2.imwrite("dbg\\restored_image.png", bgr)
+
+    if False:
+        # Save final BGR image
+        bgr = cv2.normalize(img_proc, None, 0, 255, cv2.NORM_MINMAX)
+        cv2.imwrite("dbg\\restored_image.png", bgr)
 
     return img_proc

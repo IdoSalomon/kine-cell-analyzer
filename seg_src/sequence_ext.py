@@ -240,7 +240,7 @@ def analyze_channels(channels):
                             break
 
 
-def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.03): # TODO change threshold
+def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.3): # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]

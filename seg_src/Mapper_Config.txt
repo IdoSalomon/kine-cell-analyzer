@@ -1,5 +1,5 @@
 inputDirectory: images\L136\A2\4\concomps\
-filenamePrefix: L136_A2_4_{iii}_phase.tif
+filenamePrefix: L136_A2_4_{iii}.tif
 outputDirectory: images\L136\A2\4\concomps\track\
 outputPrefix: trk-
 weightCellOverlap: 1
