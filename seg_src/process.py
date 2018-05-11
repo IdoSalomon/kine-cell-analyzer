@@ -300,7 +300,7 @@ def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, f
     opt_params_first = OptParams(smooth_weight=opt_params.smooth_weight, spars_weight=opt_params.spars_weight, sel_basis=opt_params.sel_basis, epsilon=opt_params.epsilon, gamma=opt_params.gamma, img_scale=opt_params.img_scale, max_itr=opt_params.max_itr, opt_tolr=opt_params.opt_tolr)
 
     # Second channel with larger kernel radius
-    next = ps.prec_sparse(img, opt_params_first, ker_params_first, True)
+    next = ps.prec_sparse(img, opt_params_first, ker_params_first, debug)
     next = next[:, :, 0]
 
     # Stack both first channels (enhances results)

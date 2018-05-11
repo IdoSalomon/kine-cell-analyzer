@@ -12,7 +12,7 @@ from scipy import misc
 from debug_utils import save_debug_fig
 
 
-def prec_sparse(img, opt_params, ker_params, debug=True):
+def prec_sparse(img, opt_params, ker_params, debug=False):
     """
     Creates reconditioned image
 

@@ -102,10 +102,10 @@ def load_label_colors():
         label_colors[i] = random.randint(1, 255)
 
 
-def load_sequence(dir, ker_params, opt_params, comps_dir, itr=500):
+def load_sequence(dir, ker_params, opt_params, comps_dir, debug=True, itr=500):
     i = 0
     for interval in seq_paths:
-        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, debug = False, comps_dir=comps_dir)
+        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, debug=debug, comps_dir=comps_dir)
         seq_frames[frame.id] = frame
 
         i += 1
@@ -292,15 +292,16 @@ if __name__ == "__main__":
     print("\nStarted sequence loading\n")
 
     seq_paths = io_utils.load_paths(dir)
-    iterations = 500
+    iterations = 1
+    debug = False
 
-    load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir, itr=iterations)
+    load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir, debug=debug, itr=iterations)
 
     print("\nFinished sequence tracking\n")
 
     print("\nStarted sequence tracking\n")
 
-    track_sequence()
+    #track_sequence()
 
     print("\nFinished sequence tracking\n")
 
