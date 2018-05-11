@@ -91,7 +91,7 @@ def find_borders(labels, ker):
                 pos = False
                 # Avoid decimating sparsely detected cells
                 for i in range(num_uniques):
-                    if stats[uniques[i], cv2.CC_STAT_AREA] > 20:
+                    if stats[uniques[i], cv2.CC_STAT_AREA] > 13:
                         pos = True
                 # Add to mask if is border between large connected components
                 if num_uniques > 1 and pos:
@@ -248,7 +248,6 @@ def process_aux_channels(img, despeckle_size=1, kernel=np.ones((2, 2), np.uint8)
 def calc_borders(restored_img, img, despeckle_size, ker):
     #normailize image to unit8 range: 0-255
     restored = cv2.normalize(restored_img, None, 0, 255, cv2.NORM_MINMAX)
-    orig_img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
 
     restored = np.uint8(restored)
 
@@ -274,51 +273,58 @@ def calc_borders(restored_img, img, despeckle_size, ker):
     return borders
 
 
+def fix_segmentation(orig, sub):
+    sub = np.uint8(sub)
+    tmp_img = np.copy(sub)
+    orig_connectivity = 8
+    connectivity = 8
+    orig_labels = cv2.connectedComponentsWithStats(orig, connectivity=orig_connectivity)
+    num_cells_orig = orig_labels[0]
+    label_img_orig = orig_labels[1]
+    num_cells_sub = cv2.connectedComponentsWithStats(sub, connectivity=connectivity)[0]
+    stats = orig_labels[2]
+
+    for cell_id in range(1, num_cells_orig):
+        last_img = np.copy(tmp_img)
+        tmp_img[label_img_orig == cell_id] = 255
+        if cv2.connectedComponentsWithStats(tmp_img, connectivity=connectivity)[0] != num_cells_sub:
+            tmp_img = np.copy(last_img)
+    return last_img
+
+
+
 def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, file_name=0, debug=False):
+    # First channel with small kernel radius
     additive_zero = ps.prec_sparse(img, opt_params, ker_params, debug)[:, :, 0]
     ker_params_first = KerParams(ring_rad=ker_params.ring_rad, ring_wid=ker_params.ring_wid, ker_rad=ker_params.ker_rad + 1, zetap=ker_params.zetap, dict_size=ker_params.dict_size)
-    opt_params_first = OptParams(smooth_weight=opt_params.smooth_weight, spars_weight=opt_params.spars_weight, sel_basis=opt_params.sel_basis + 1, epsilon=opt_params.epsilon, gamma=opt_params.gamma, img_scale=opt_params.img_scale, max_itr=opt_params.max_itr, opt_tolr=opt_params.opt_tolr)
+    opt_params_first = OptParams(smooth_weight=opt_params.smooth_weight, spars_weight=opt_params.spars_weight, sel_basis=opt_params.sel_basis, epsilon=opt_params.epsilon, gamma=opt_params.gamma, img_scale=opt_params.img_scale, max_itr=opt_params.max_itr, opt_tolr=opt_params.opt_tolr)
+
+    # Second channel with larger kernel radius
     next = ps.prec_sparse(img, opt_params_first, ker_params_first, True)
-    next_first = next[:, :, 1]
     next = next[:, :, 0]
 
+    # Stack both first channels (enhances results)
     additive_zero = cv2.add(additive_zero, next)
 
-    borders = calc_borders(additive_zero, img, despeckle_size, ker=(5, 5))
-
+    # Create initial mask
     post_proc = gen_phase_mask(additive_zero, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name)
 
-    next_first = cv2.normalize(next_first, None, 0, 255, cv2.NORM_MINMAX)
+    # Calculate borders
+    borders = calc_borders(additive_zero, img, despeckle_size, ker=(5, 5))
 
-    tmp, next_first_mask = cv2.threshold(next_first, 1, 255, cv2.THRESH_BINARY)
-
-    #next_first_mask = cv2.normalize(next_first_mask, None, 0, 255, cv2.NORM_MINMAX)
-
-
-    next_first_mask = pre_filter_far_cells(np.uint8(next_first_mask), despeckle_size=1, debug=debug)
-    next_first_mask = cv2.morphologyEx(next_first_mask, cv2.MORPH_CLOSE, (3, 3), iterations=3)
-
-
-    #next_first_mask = filter_far_cells(next_first_mask, dev_thresh=dev_thresh, debug=debug)
-
-
-    sub_next = cv2.subtract(post_proc, np.uint8(next_first_mask))
-    sub_next = pre_filter_far_cells(np.uint8(sub_next), despeckle_size=3, debug=debug)
-    sub_next = filter_far_cells(np.uint8(sub_next), dev_thresh=1.8, debug=debug)
-
+    # Subtract borders from initial mask
     sub_filter = cv2.subtract(post_proc, np.uint8(borders))
-
     sub_filter = pre_filter_far_cells(sub_filter, despeckle_size=3)
     sub_filter = filter_far_cells(sub_filter, dev_thresh=1.8)
 
-    io_utils.save_img(sub_next, "dbg\\test_sub.png", uint8=True)  # TODO Remove
+    # Fix segmentation
+    fixed = fix_segmentation(post_proc, sub_filter)
+
     io_utils.save_img(sub_filter, "dbg\\test_sub_filter.png", uint8=True)  # TODO Remove
     io_utils.save_img(post_proc, "dbg\\test_proc.png", uint8=True)  # TODO Remove
-    io_utils.save_img(next_first_mask, "dbg\\test_next_first_mask.png", uint8=True)  # TODO Remove
-    io_utils.save_img(next_first, "dbg\\test_next_first.png", uint8=True)  # TODO Remove
+    io_utils.save_img(fixed, "dbg\\test_sub_filter_fixed.png", uint8=True)  # TODO Remove
 
-
-    return sub_filter
+    return fixed
 
 
 def gen_gfp_mask(raw_threshold, orig_img, debug=True):
