@@ -1,5 +1,6 @@
 from enum import Enum
 
-class FileFormat(Enum):
+class TitleFormat(Enum):
     SCENE = 1
     DATE = 2
+    TRACK = 3

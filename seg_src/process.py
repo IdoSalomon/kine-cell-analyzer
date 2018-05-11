@@ -99,7 +99,7 @@ def find_borders(labels, ker):
 
     return borders
 
-def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=True):
+def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=False):
     dbgImgs = []
     if debug:
         dbgImgs += [(restored, 'initial')]
@@ -266,8 +266,6 @@ def calc_borders(restored_img, img, despeckle_size, ker):
 
     borders = find_borders(labels, ker)
 
-    # TODO Add masks from proc if it doesn't change connected components (extends single cells). Figure out solution for oversegmented cells.
-
     io_utils.save_img(borders, "dbg\\borders.png")  # TODO Remove
 
     return borders
@@ -307,7 +305,7 @@ def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, f
     additive_zero = cv2.add(additive_zero, next)
 
     # Create initial mask
-    post_proc = gen_phase_mask(additive_zero, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name)
+    post_proc = gen_phase_mask(additive_zero, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name, debug=debug)
 
     # Calculate borders
     borders = calc_borders(additive_zero, img, despeckle_size, ker=(5, 5))

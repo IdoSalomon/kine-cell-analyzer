@@ -144,7 +144,7 @@ def load_frame_ext(interval, tracked_paths, opt_params, seq_paths):
         Loaded frame
     """
 
-    frame_id = io_utils.extract_num(interval, misc_params.FileFormat.SCENE)
+    frame_id = io_utils.extract_num(interval, misc_params.TitleFormat.SCENE)
     images = create_stack(seq_paths[interval], opt_params=opt_params) # original channels
     tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params) # image after tracking
     cells = get_cells_ext(tracked_img=tracked_img, images=images, frame_id=frame_id) # image's cell representation

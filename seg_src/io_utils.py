@@ -8,7 +8,7 @@ date_id = {} # Maps dates to image ID
 
 img_index = 0
 
-def extract_name(title, format=par.FileFormat.DATE):
+def extract_name(title, format=par.TitleFormat.DATE):
     """
     Extracts image name from file title.
 
@@ -26,12 +26,12 @@ def extract_name(title, format=par.FileFormat.DATE):
     if title:
         filename, file_extension = os.path.splitext(title)
 
-        if format == par.FileFormat.SCENE:
+        if format == par.TitleFormat.SCENE:
             name = filename.split('_') # removes channel and image type information
             if len(name) > 0:
                 return name[0]
 
-        elif format == par.FileFormat.DATE:
+        elif format == par.TitleFormat.DATE:
             splt = filename.split('_')
             del splt[1]
             del splt[-2:]
@@ -39,8 +39,10 @@ def extract_name(title, format=par.FileFormat.DATE):
             name = ("_".join(splt))
             if len(name) > 0:
                 return name
+        elif format == par.TitleFormat.TRACK:
+            return filename
 
-        """elif format == par.FileFormat.DATE:
+        """elif format == par.TitleFormat.DATE:
             splt = filename.split('_')
             name = ("".join(splt[0:3]))
             if len(name) > 0:
@@ -49,7 +51,7 @@ def extract_name(title, format=par.FileFormat.DATE):
     return ""
 
 
-def extract_date(title, format=par.FileFormat.DATE):
+def extract_date(title, format=par.TitleFormat.DATE):
     """
     Extracts image date from file title.
 
@@ -65,13 +67,13 @@ def extract_date(title, format=par.FileFormat.DATE):
     if title:
         filename, file_extension = os.path.splitext(title)
 
-        if format == par.FileFormat.DATE:
+        if format == par.TitleFormat.DATE:
             splt = filename.split('_')
             date = ("_".join(splt[-2:]))
             if len(date) > 0:
                 return date
 
-        """elif format == par.FileFormat.DATE:
+        """elif format == par.TitleFormat.DATE:
             splt = filename.split('_')
             name = ("".join(splt[0:3]))
             if len(name) > 0:
@@ -80,7 +82,7 @@ def extract_date(title, format=par.FileFormat.DATE):
     return ""
 
 
-def extract_num(title, format=par.FileFormat.DATE):
+def extract_num(title, format=par.TitleFormat.DATE):
     """
     Extracts image (interval) number from file title.
 
@@ -97,12 +99,12 @@ def extract_num(title, format=par.FileFormat.DATE):
     """
 
     if title:
-        if format == par.FileFormat.SCENE:
+        if format == par.TitleFormat.SCENE:
             digits = [int(s) for s in title if s.isdigit()]
             if len(digits) > 0:
                 return int("".join([str(dig) for dig in digits[-3:]]))
 
-        elif format == par.FileFormat.DATE:
+        elif format == par.TitleFormat.DATE:
             index = -1
             date = extract_date(title, format)
 
@@ -116,9 +118,10 @@ def extract_num(title, format=par.FileFormat.DATE):
                 index = date_id[date]
 
             return index
+        elif format == par.TitleFormat.TRACK:
+            return int(title[-3:])
 
-
-        """elif format == par.FileFormat.DATE:
+        """elif format == par.TitleFormat.DATE:
             filename, file_extension = os.path.splitext(title)
             splt = filename.split('_')
             digits = ("".join(splt[-2:]))
@@ -128,12 +131,12 @@ def extract_num(title, format=par.FileFormat.DATE):
     return -1
 
 
-def load_paths(dir):
+def load_paths(dir, format=par.TitleFormat.DATE):
     paths = {}
     for f in os.listdir(dir):
         filename, file_extension = os.path.splitext(f)
         if file_extension in img_extensions:
-            name = extract_name(f)
+            name = extract_name(f, format=format)
             if name:
                 if "trk-" in name:
                     name = filename
