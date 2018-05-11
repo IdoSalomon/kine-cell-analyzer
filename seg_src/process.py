@@ -193,7 +193,7 @@ def filter_far_cells(thresh, dev_thresh=1, debug = True):
             filtered[output == i + 1] = 255
 
     if debug:
-        print('filtered {} out of {} segmented particles. {} cells remain.'.format(filtered_components, init_components, init_components - filtered_components))
+        print('STD filter: filtered {} out of {} segmented particles. {} cells remain.'.format(filtered_components, init_components, init_components - filtered_components))
 
     return filtered
 
@@ -224,7 +224,7 @@ def pre_filter_far_cells(thresh, despeckle_size=0, debug=True):
             filtered[output == i + 1] = 255
 
     if debug:
-        print('filtered {} out of {} segmented particles. {} cells remain.'.format(filtered_components, init_components, init_components - filtered_components))
+        print('Min Area filter: filtered {} out of {} segmented particles. {} cells remain.'.format(filtered_components, init_components, init_components - filtered_components))
 
     return filtered
 
