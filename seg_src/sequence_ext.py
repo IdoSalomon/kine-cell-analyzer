@@ -226,7 +226,7 @@ def analyze_channels(channels):
         frame_bg = {}  # dictionary <img, float, float> that holds the current frame channel + mean background
 
         # iterate over first frame identified cells
-        for cell in cells_frames:
+        for cell in seq_frames[1].cells:
             if cell != 0: # skip background label
                 # iterate over next frames
                 for frame_id in range(2, max(seq_frames)):

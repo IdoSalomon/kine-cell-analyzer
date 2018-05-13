@@ -5,14 +5,19 @@ import cv2
 
 import cell
 import img_utils
+import img_utils as iu
+import misc_params
 import sequence_ext as ext
 import numpy as np
+import prec_sparse as ps
 import process as pr
 import frame as fr
 import io_utils
 import subprocess
 import cell as cl
 import misc_params as mpar
+import matplotlib.pyplot as plt
+import itertools
 
 seq_paths = {} # Paths to all sequence images
 from prec_params import KerParams, OptParams
@@ -79,9 +84,10 @@ def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, d
     # Segment
     masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug=debug)
     # Generate and save connected components
+    con_comp = 0
     for channel in seg_channel_types:
         if channel in masks:
-            con_comp = pr.get_connected_components(masks[channel], grayscale=True, dst_path=comps_dir + '\\' + interval + ".tif", debug=debug)
+            con_comp = pr.get_connected_components(masks[channel], grayscale=True, debug=debug)
             b = cv2.normalize(con_comp[1], None, 0, 255, cv2.NORM_MINMAX)
             g = cv2.normalize(images["fitc"], None, 0, 255, cv2.NORM_MINMAX)
             r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
@@ -89,7 +95,7 @@ def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, d
             vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
             cv2.imwrite(comps_dir + '\\' + 'vis\\' + interval + ".tif", vis)
 
-    frame = fr.Frame(id=io_utils.extract_num(interval,format=format), title=interval, images=images, masks=masks)
+    frame = fr.Frame(id=io_utils.extract_num(interval,format=format), title=interval, images=images, masks=masks, con_comps=con_comp[1])
     print("Loaded frame {}\n".format(interval))
 
     return frame
@@ -275,6 +281,71 @@ def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
 
     print("Finished loading sequence!\n")  # DEBUG
 
+def save_sequence_con_comps(comps_dir):
+    for frame in sorted(seq_frames):
+        print("saving" + comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")
+        io_utils.save_img(seq_frames[frame].con_comps, comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")  # TODO Remove
+        # # expand aux. channels + connected components
+        # if debug:
+        #     print("expanding connected components")
+        # seq_frames[frame].con_comps = iu.expand_img(seq_frames[frame].con_comps, pad_pixels=pad_pixels)
+        #
+        # for channel in seq_frames[frame].images:
+        #     if channel in aux_channel_types:
+        #         if debug:
+        #             print("expanding {} channel".format(channel))
+        #         seq_frames[frame].images[channel] = iu.expand_img(seq_frames[frame].images[channel], pad_pixels=pad_pixels)
+def stabilize_sequence(debug = False, pad_pixels=30):
+    for frame in sorted(seq_frames):
+        if frame == 1:
+            continue
+
+        if debug:
+            print("stabilizing frame {}".format(frame))
+
+        # step 2 - find shift vector in pixels for connected components
+        if debug:
+            print("finding optimal shift")
+        shift_cost = {}
+        con_comps = np.float32(seq_frames[frame].con_comps)
+        prev_con_comps = np.float32(seq_frames[frame - 1].con_comps)
+        rows, cols = con_comps.shape
+
+        # for x in range(-pad_pixels, pad_pixels):
+        #     for y in range(-pad_pixels, pad_pixels):
+        #         if x==29 and y == 29:
+        warp_matrix = []
+        try:
+            warp_matrix = pr.align_img(con_comps, prev_con_comps)
+        except:
+            for i in range(10, 100, 10):
+                shifts = [x for x in itertools.product([0, 10, -10], repeat = 2)]
+                for shift in shifts:
+                    M = np.float32([[1, 0, shift[0]], [0, 1, shift[1]]])
+                    shifted =  cv2.warpAffine(con_comps ,M , (cols, rows))
+                    try:
+                        warp_matrix = pr.align_img(shifted, prev_con_comps)
+                    except:
+                        continue
+                    break
+
+        # shift connected components
+        seq_frames[frame].con_comps = cv2.warpAffine(con_comps ,warp_matrix , (cols, rows))
+        plt.imshow(seq_frames[frame].con_comps)
+        plt.show()
+
+        # shift aux channels
+        for channel in seq_frames[frame].images:
+            if channel in aux_channel_types:
+                seq_frames[frame].images[channel] = cv2.warpAffine(np.float32(seq_frames[frame].images[channel]) ,warp_matrix , (cols, rows))
+                if debug:
+                    plt.imshow(seq_frames[frame].images[channel])
+                    plt.show()
+
+        #shift_cost[x, y] = sum(con_comps - shifted_xy)
+        #print(min(shift_cost.values()))
+
+
 
 
 def analyze_channels(channels):
@@ -372,9 +443,10 @@ if __name__ == "__main__":
     comps_dir = "images\\seq_nec\\concomps"""
 
     # load_tracked_masks("images\\seq_nec\\tracked")
-    print("\nStarted sequence loading\n")
+    print("Started sequence loading\n")
 
-    iterations = 20
+    seq_paths = io_utils.load_paths(dir)
+    iterations = 2
     debug = False
     file_format = mpar.TitleFormat.DATE
 
@@ -382,25 +454,35 @@ if __name__ == "__main__":
 
     load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir, debug=debug, itr=iterations, format=mpar.TitleFormat.TRACK)
 
-    print("\nFinished sequence tracking\n")
+    print("Finished sequence Loading\n")
 
-    print("\nStarted sequence tracking\n")
+    print("Started sequence stabilization\n")
+
+    stabilize_sequence(True);
+
+    print("Finished sequence stabilization\n")
+
+    print("Saving connected components...\n")
+
+    save_sequence_con_comps(comps_dir)
+
+    print("Started sequence tracking\n")
 
     track_sequence()
 
-    print("\nFinished sequence tracking\n")
+    print("Finished sequence tracking\n")
 
-    print("\nStarted loading tracked sequence\n")
+    print("Started loading tracked sequence\n")
 
     load_tracked_sequence(dir_tracked="images\\L136\\A2\\4\\concomps\\track", format=mpar.TitleFormat.TRACK)
 
-    print("\nFinished loading tracked sequence\n")
+    print("Finished loading tracked sequence\n")
 
-    ext.analyze_channels(["fitc", "PI"])
+    analyze_channels(["fitc", "PI"])
 
     print("Finished analyze_channels\n")
 
-    ext.debug_channels("dbg\\L136\\A2\\4", ["fitc", "PI"])
+    debug_channels("dbg\\L136\\A2\\4", ["fitc", "PI"])
 
     print("Finished debug_channels\n")
     

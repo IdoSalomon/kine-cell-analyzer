@@ -182,6 +182,9 @@ def im2double(im):
     info = np.iinfo(im.dtype) # Get the data type of the input image
     return im.astype(np.float) / info.max # Divide all values by the largest possible value in the datatype
 
+def expand_img(img, pad_pixels):
+    return np.pad(img, ((pad_pixels, pad_pixels),( pad_pixels, pad_pixels)), mode='constant', constant_values=0)
+
 if __name__ == "__main__":
     img = np.array([[1, 1, 0], [0, 1, 0], [0, 0, 0]])
     bg_removal(img, True)

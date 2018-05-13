@@ -72,10 +72,10 @@ def align_img(img_to_align, img_ref, thresh=1e-5, warp_mode=cv2.MOTION_TRANSLATI
                                      flags=cv2.WARP_INVERSE_MAP)
 
     # Save final output
-    cv2.imwrite("dbg\\ColorImage.png", cv2.normalize(img_ref, None, 0, 255, cv2.NORM_MINMAX))
-    cv2.imwrite("dbg\\ColorAlignedImage.png", cv2.normalize(img_aligned, None, 0, 255, cv2.NORM_MINMAX))
+    # cv2.imwrite("dbg\\ColorImage.png", cv2.normalize(img_ref, None, 0, 255, cv2.NORM_MINMAX))
+    #  cv2.imwrite("dbg\\ColorAlignedImage.png", cv2.normalize(img_aligned, None, 0, 255, cv2.NORM_MINMAX))
 
-    return img_aligned
+    return warp_matrix
 
 def padding_for_kernel(kernel):
     """ Return the amount of padding needed for each side of an image.
@@ -197,7 +197,7 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
 
     return filtered
 
-def get_connected_components(img, dst_path, grayscale=True, debug=True):
+def get_connected_components(img, grayscale=True, debug=True):
 
     img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
     img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY)[1]  # ensure binary
@@ -205,8 +205,6 @@ def get_connected_components(img, dst_path, grayscale=True, debug=True):
 
     connectivity = 4
     labels = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
-
-    io_utils.save_img(labels[1], dst_path)  # TODO Remove
 
     return labels
 
