@@ -21,8 +21,12 @@ def get_gradient(img):
     return grad
 
 def align_img(img_to_align, img_ref):
-    img_to_align = iu.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
-    img_ref = iu.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
+    img_to_align = iu.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_08h45m.tif", 0.5, True, False)
+    img_ref = iu.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_08h30m.tif", 0.5, True, False)
+
+    #img_to_align = iu.load_img("dbg\\ColorAlignedImage.png", 1, True, False)
+    #img_ref = iu.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_08h45m.tif", 0.5, True, False)
+
     img_aligned = img_to_align
 
     # Find the width and height of the color image
@@ -49,6 +53,7 @@ def align_img(img_to_align, img_ref):
     img_aligned = cv2.warpAffine(img_to_align, warp_matrix, (width, height),
                                       flags=cv2.WARP_INVERSE_MAP)
 
+    print(warp_matrix)
     # Show final output
     cv2.imwrite("dbg\\ColorImage.png", cv2.normalize(img_ref, None, 0, 255, cv2.NORM_MINMAX))
     cv2.waitKey(0)

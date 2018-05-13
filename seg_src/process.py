@@ -42,7 +42,7 @@ def get_gradient(img):
 
     return grad
 
-def align_img(img_to_align, img_ref, thresh=1e-5, warp_mode=cv2.MOTION_TRANSLATION):
+def align_img(img_to_align, img_ref, thresh=1e-7, warp_mode=cv2.MOTION_TRANSLATION):
     # Initialize final aligned image
     img_aligned = img_to_align
 
@@ -56,7 +56,7 @@ def align_img(img_to_align, img_ref, thresh=1e-5, warp_mode=cv2.MOTION_TRANSLATI
         warp_matrix = np.eye(2, 3, dtype=np.float32) # Affine
 
     # Set the stopping criteria for the algorithm.
-    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 500000000, thresh)
+    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 500, thresh)
 
     # Find warp matrix for alignment
     (cc, warp_matrix) = cv2.findTransformECC(get_gradient(img_ref), get_gradient(img_to_align),
