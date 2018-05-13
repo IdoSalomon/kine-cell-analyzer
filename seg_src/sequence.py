@@ -297,6 +297,8 @@ def save_sequence_con_comps(comps_dir):
         #         seq_frames[frame].images[channel] = iu.expand_img(seq_frames[frame].images[channel], pad_pixels=pad_pixels)
 
 def stabilize_sequence(debug = False, pad_pixels=30):
+    aggr_shift_x = 0
+    aggr_shift_y = 0
     for frame in sorted(seq_frames):
         if frame == 1:
             continue
@@ -310,7 +312,7 @@ def stabilize_sequence(debug = False, pad_pixels=30):
         shift_cost = {}
         phase_chan = [x for x in seq_frames[frame].images if x in seg_channel_types][0]
         phase = np.float32(seq_frames[frame].images[phase_chan])
-        prev_phase = np.float32(seq_frames[frame - 1].images[phase_chan])
+        prev_phase = np.float32(seq_frames[frame-1].images[phase_chan])
         rows, cols = phase.shape
 
         # for x in range(-pad_pixels, pad_pixels):
@@ -331,7 +333,7 @@ def stabilize_sequence(debug = False, pad_pixels=30):
                 for shift in shifts:
                     print("trying shift {}".format(shift))
                     M = np.float32([[1, 0, shift[0]], [0, 1, shift[1]]])
-                    shifted =  cv2.warpAffine(phase ,M , (cols, rows))
+                    shifted =  cv2.warpAffine(phase ,M , (cols, rows), flags=cv2.WARP_INVERSE_MAP)
                     try:
                         warp_matrix = pr.align_img(shifted, prev_phase)
                     except:
@@ -343,21 +345,21 @@ def stabilize_sequence(debug = False, pad_pixels=30):
 
         shiftx, shifty = (int(round(warp_matrix[0][2])), int(round(warp_matrix[1][2])))
         print("align_img return shift: {}".format((warp_matrix[0][2] , warp_matrix[1][2])))
-        final_shift = (int(round(warp_matrix[0][2] + pre_shift[0])) ,int(round(warp_matrix[1][2] + pre_shift[1])))
+        final_shift = (int(round(warp_matrix[0][2] + pre_shift[0] + aggr_shift_x)) ,int(round(warp_matrix[1][2] + pre_shift[1] + aggr_shift_y)))
         print("final shift: {}".format(final_shift))
 
-        warp_matrix[0][2] = final_shift[0]
-        warp_matrix[1][2] = final_shift[1]
+        warp_matrix[0][2] = aggr_shift_x = final_shift[0]
+        warp_matrix[1][2] = aggr_shift_y =  final_shift[1]
 
         # shift connected components
-        seq_frames[frame].con_comps = cv2.warpAffine(np.float32(seq_frames[frame].con_comps) ,warp_matrix , (cols, rows))
+        seq_frames[frame].con_comps = cv2.warpAffine(np.float32(seq_frames[frame].con_comps) ,warp_matrix , (cols, rows), flags=cv2.WARP_INVERSE_MAP)
         plt.imshow(seq_frames[frame].con_comps)
         plt.show()
 
         # shift aux channels
         for channel in seq_frames[frame].images:
             if channel in aux_channel_types:
-                seq_frames[frame].images[channel] = cv2.warpAffine(np.float32(seq_frames[frame].images[channel]) ,warp_matrix , (cols, rows))
+                seq_frames[frame].images[channel] = cv2.warpAffine(np.float32(seq_frames[frame].images[channel]) ,warp_matrix , (cols, rows), flags=cv2.WARP_INVERSE_MAP)
                 if debug:
                     plt.imshow(seq_frames[frame].images[channel])
                     plt.show()
