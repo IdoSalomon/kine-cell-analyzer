@@ -295,6 +295,7 @@ def save_sequence_con_comps(comps_dir):
         #         if debug:
         #             print("expanding {} channel".format(channel))
         #         seq_frames[frame].images[channel] = iu.expand_img(seq_frames[frame].images[channel], pad_pixels=pad_pixels)
+
 def stabilize_sequence(debug = False, pad_pixels=30):
     for frame in sorted(seq_frames):
         if frame == 1:
@@ -307,31 +308,49 @@ def stabilize_sequence(debug = False, pad_pixels=30):
         if debug:
             print("finding optimal shift")
         shift_cost = {}
-        con_comps = np.float32(seq_frames[frame].con_comps)
-        prev_con_comps = np.float32(seq_frames[frame - 1].con_comps)
-        rows, cols = con_comps.shape
+        phase_chan = [x for x in seq_frames[frame].images if x in seg_channel_types][0]
+        phase = np.float32(seq_frames[frame].images[phase_chan])
+        prev_phase = np.float32(seq_frames[frame - 1].images[phase_chan])
+        rows, cols = phase.shape
 
         # for x in range(-pad_pixels, pad_pixels):
         #     for y in range(-pad_pixels, pad_pixels):
         #         if x==29 and y == 29:
         warp_matrix = []
+        pre_shift = (0,0)
+        is_found = False
         try:
-            warp_matrix = pr.align_img(con_comps, prev_con_comps)
+            warp_matrix = pr.align_img(phase, prev_phase)
+            print("align_img successful, no need to shift before calling")
         except:
-            for i in range(10, 100, 10):
-                shifts = [x for x in itertools.product([0, 10, -10], repeat = 2)]
+            print("align_img failed, trying to shift before calling")
+            for i in range(5, 35, 5):
+                if is_found:
+                    break
+                shifts = [x for x in itertools.product([0, i, -i], repeat=2)]
                 for shift in shifts:
+                    print("trying shift {}".format(shift))
                     M = np.float32([[1, 0, shift[0]], [0, 1, shift[1]]])
-                    shifted =  cv2.warpAffine(con_comps ,M , (cols, rows))
+                    shifted =  cv2.warpAffine(phase ,M , (cols, rows))
                     try:
-                        warp_matrix = pr.align_img(shifted, prev_con_comps)
+                        warp_matrix = pr.align_img(shifted, prev_phase)
                     except:
                         continue
+                    is_found = True
+                    pre_shift = shift
+                    print("pre-shift is {}".format(pre_shift))
                     break
 
+        shiftx, shifty = (int(round(warp_matrix[0][2])), int(round(warp_matrix[1][2])))
+        print("found shift! {}".format((warp_matrix[0][2] , warp_matrix[1][2])))
+
+
+        warp_matrix[0][2] += pre_shift[0]
+        warp_matrix[1][2] += pre_shift[1]
+
         # shift connected components
-        seq_frames[frame].con_comps = cv2.warpAffine(con_comps ,warp_matrix , (cols, rows))
-        plt.imshow(seq_frames[frame].con_comps)
+        seq_frames[frame].phase = cv2.warpAffine(phase ,warp_matrix , (cols, rows))
+        plt.imshow(seq_frames[frame].phase)
         plt.show()
 
         # shift aux channels
