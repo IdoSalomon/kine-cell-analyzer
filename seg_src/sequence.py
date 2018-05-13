@@ -357,6 +357,11 @@ def debug_channels(dir, channels):
 
 
 if __name__ == "__main__":
+
+    """img_to_align = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
+    img_ref = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
+    pr.align_img(img_to_align,img_ref)"""
+
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=1, zetap=0.8, dict_size=20)
     opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=0.5,
                            max_itr=100, opt_tolr=np.finfo(float).eps)
@@ -369,12 +374,11 @@ if __name__ == "__main__":
     # load_tracked_masks("images\\seq_nec\\tracked")
     print("\nStarted sequence loading\n")
 
-    iterations = 1
+    iterations = 20
     debug = False
     file_format = mpar.TitleFormat.DATE
 
     seq_paths = io_utils.load_paths(dir, format=file_format)
-
 
     load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir, debug=debug, itr=iterations, format=mpar.TitleFormat.TRACK)
 
@@ -396,7 +400,7 @@ if __name__ == "__main__":
 
     print("Finished analyze_channels\n")
 
-    ext.debug_channels("dbg\\chan_analysis_apo", ["fitc", "PI"])
+    ext.debug_channels("dbg\\L136\\A2\\4", ["fitc", "PI"])
 
     print("Finished debug_channels\n")
     

@@ -32,6 +32,51 @@ cpdef unsigned char[:, :] threshold_fast(int T, unsigned char[:, :] image):
     return image
 """
 
+def get_gradient(img):
+    # Calculate the x and y gradients using Sobel operator
+    grad_x = np.float32(cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5))
+    grad_y = np.float32(cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=5))
+
+    # Combine the two gradients
+    grad = cv2.addWeighted(np.absolute(grad_x), 0.5, np.absolute(grad_y), 0.5, 0)
+
+    return grad
+
+def align_img(img_to_align, img_ref, thresh=1e-5, warp_mode=cv2.MOTION_TRANSLATION):
+    # Initialize final aligned image
+    img_aligned = img_to_align
+
+    # Find the width and height of the image
+    height, width = img_ref.shape
+
+    # Set the warp matrix to identity
+    if warp_mode == cv2.MOTION_HOMOGRAPHY :
+        warp_matrix = np.eye(3, 3, dtype=np.float32) # Homography
+    else:
+        warp_matrix = np.eye(2, 3, dtype=np.float32) # Affine
+
+    # Set the stopping criteria for the algorithm.
+    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 500000000, thresh)
+
+    # Find warp matrix for alignment
+    (cc, warp_matrix) = cv2.findTransformECC(get_gradient(img_ref), get_gradient(img_to_align),
+                                             warp_matrix, warp_mode, criteria)
+    # Warp
+    if warp_mode == cv2.MOTION_HOMOGRAPHY:
+        # Use Perspective warp when the transformation is a Homography
+        img_aligned = cv2.warpPerspective(img_to_align, warp_matrix, (width, height),
+                                     flags=cv2.WARP_INVERSE_MAP)
+    else:
+        # Use Affine warp when the transformation is not a Homography
+        img_aligned = cv2.warpAffine(img_to_align, warp_matrix, (width, height),
+                                     flags=cv2.WARP_INVERSE_MAP)
+
+    # Save final output
+    cv2.imwrite("dbg\\ColorImage.png", cv2.normalize(img_ref, None, 0, 255, cv2.NORM_MINMAX))
+    cv2.imwrite("dbg\\ColorAlignedImage.png", cv2.normalize(img_aligned, None, 0, 255, cv2.NORM_MINMAX))
+
+    return img_aligned
+
 def padding_for_kernel(kernel):
     """ Return the amount of padding needed for each side of an image.
 
