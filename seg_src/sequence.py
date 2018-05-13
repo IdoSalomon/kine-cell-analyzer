@@ -342,15 +342,16 @@ def stabilize_sequence(debug = False, pad_pixels=30):
                     break
 
         shiftx, shifty = (int(round(warp_matrix[0][2])), int(round(warp_matrix[1][2])))
-        print("found shift! {}".format((warp_matrix[0][2] , warp_matrix[1][2])))
+        print("align_img return shift: {}".format((warp_matrix[0][2] , warp_matrix[1][2])))
+        final_shift = (int(round(warp_matrix[0][2] + pre_shift[0])) ,int(round(warp_matrix[1][2] + pre_shift[1])))
+        print("final shift: {}".format(final_shift))
 
-
-        warp_matrix[0][2] += pre_shift[0]
-        warp_matrix[1][2] += pre_shift[1]
+        warp_matrix[0][2] = final_shift[0]
+        warp_matrix[1][2] = final_shift[1]
 
         # shift connected components
-        seq_frames[frame].phase = cv2.warpAffine(phase ,warp_matrix , (cols, rows))
-        plt.imshow(seq_frames[frame].phase)
+        seq_frames[frame].con_comps = cv2.warpAffine(np.float32(seq_frames[frame].con_comps) ,warp_matrix , (cols, rows))
+        plt.imshow(seq_frames[frame].con_comps)
         plt.show()
 
         # shift aux channels
@@ -465,7 +466,7 @@ if __name__ == "__main__":
     print("Started sequence loading\n")
 
     seq_paths = io_utils.load_paths(dir)
-    iterations = 2
+    iterations = 3
     debug = False
     file_format = mpar.TitleFormat.DATE
 
