@@ -354,7 +354,7 @@ def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, f
 
     # Subtract borders from initial mask
     sub_filter = cv2.subtract(post_proc, np.uint8(borders))
-    sub_filter = pre_filter_far_cells(sub_filter, despeckle_size=3)
+    sub_filter = pre_filter_far_cells(sub_filter, despeckle_size=9) # 1-9 pixel cells are most likely noise
     sub_filter = filter_far_cells(sub_filter, dev_thresh=1.8)
 
     # Fix segmentation
