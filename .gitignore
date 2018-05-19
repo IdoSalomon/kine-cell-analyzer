@@ -4,3 +4,4 @@ apply-gitignore = !git ls-files -ci --exclude-standard -z | xargs -0 git rm --ca
 dbg
 *.pyc
 __pycache__
+concomps/
