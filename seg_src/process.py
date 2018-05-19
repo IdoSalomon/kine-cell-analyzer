@@ -43,9 +43,6 @@ def get_gradient(img):
     return grad
 
 def align_img(img_to_align, img_ref, thresh=1e-7, warp_mode=cv2.MOTION_TRANSLATION):
-    # Initialize final aligned image
-    img_aligned = img_to_align
-
     # Find the width and height of the image
     height, width = img_ref.shape
 
