@@ -18,6 +18,7 @@ import cell as cl
 import misc_params as mpar
 import matplotlib.pyplot as plt
 import itertools
+import multiprocessing as mp
 
 seq_paths = {} # Paths to all sequence images
 from prec_params import KerParams, OptParams
@@ -38,6 +39,21 @@ cells_trans = {} # dictionary <int, dict<str, int>> that holds for each cell ID 
 
 
 def create_stack(chan_paths, opt_params):
+    """
+    Loads all frame's channel images.
+    Parameters
+    ----------
+    chan_paths : list<str>
+        Paths to frame channel images
+    opt_params : OptParams
+        Optimization parameters
+
+    Returns
+    -------
+    channels : dict<str, 2darray>
+        Dictionary of images by channel name
+
+    """
     channels = {}
     # Scan all channels
     for chan_path in chan_paths:
@@ -47,21 +63,43 @@ def create_stack(chan_paths, opt_params):
             if chan_type in chan_path:
                 channels[chan_type] = img_utils.load_img(chan_path, opt_params.img_scale, False, False)
                 if chan_type in aux_channel_types:
-                    ext.seg_aux_channels(channels[chan_type], chan_type) # FIXME Already float
+                    ext.seg_aux_channels(channels[chan_type], chan_type)
                 break
 
     return channels
 
 
 def create_masks(channels, ker_params, opt_params, interval, debug):
+    """
+    Creates segmentation masks.
+
+    Parameters
+    ----------
+    channels : dict<str, 2darray>
+        Frame's channel images by channel name.
+    ker_params : KerParams
+        Kernel parameters.
+    opt_params : OptParams
+        Optimization parameters.
+    interval : str
+        Frame name.
+    debug : bool
+        Is debug active.
+
+    Returns
+    -------
+    chans : dict<str, 2darray>
+        Masks by channel name.
+    """
     chans = {}
     for channel in channels:
-        if channel in seg_channel_types:
+        if channel in seg_channel_types: # Create masks only for selected channels
+            # Segment
             chans[channel] = pr.seg_phase(channels[channel], despeckle_size=1, dev_thresh=2, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
     return chans
 
 
-def get_cells_con_comps(con_comps, debug=True):
+def get_cells_con_comps(con_comps, debug=False):
     cells = {}
     num_labels = con_comps[0]
     label_mat = con_comps[1]
@@ -79,6 +117,31 @@ def get_cells_con_comps(con_comps, debug=True):
 
 
 def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug=False):
+    """
+    Loads frame.
+
+    Parameters
+    ----------
+    interval : str
+        Frame name.
+    ker_params : KerParams
+        Kernel parameters.
+    opt_params : OptParams
+        Optimization parameters.
+    seq_paths : dict<str>
+        Paths to sequence images.
+    comps_dir : str
+        Path to connected components target directory
+    format : TitleFormat
+        Image title format.
+    debug : bool
+        Is debug active
+
+    Returns
+    -------
+    frame : Frame
+        Loaded frame.
+    """
     # Load channels
     images = create_stack(seq_paths[interval], opt_params=opt_params)
     # Segment
@@ -106,21 +169,56 @@ def load_label_colors():
         label_colors[i] = random.randint(1, 255)
 
 
-def load_sequence(dir, ker_params, opt_params, comps_dir, format, debug=True, itr=500):
-    i = 0
-    for interval in seq_paths:
-        frame = load_frame(interval, ker_params=ker_params, opt_params=opt_params, seq_paths=seq_paths, debug=debug, comps_dir=comps_dir, format=format)
-        seq_frames[frame.id] = frame
+def aggr_procs(result):
+    """
+    Aggregates results of processes loading the frames.
 
+    Parameters
+    ----------
+    result : Frame
+        frame to aggregate
+
+    """
+    # Add frame to collection
+    seq_frames[result.id] = result
+
+
+def load_sequence(dir, ker_params, opt_params, comps_dir, format, debug=True, itr=500, procs=4):
+    """
+    Loads frame sequence.
+    Parameters
+    ----------
+    dir : str
+        Path to image sequence directory
+    ker_params : KerParams
+        Kernel parameters
+    opt_params : OptParams
+        Optimization parameters
+    comps_dir : str
+        Path to connected components target directory
+    format : TitleFormat
+        Image title format.
+    debug : bool
+        Is debug active
+    itr : int
+        Max number of iterations
+    procs : int
+        Number of concurrent processes to run
+
+    """
+    pool = mp.Pool(processes=procs)
+    i = 0
+
+    # Load all frames
+    for interval in seq_paths:
+        pool.apply_async(load_frame, args=(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug), callback=aggr_procs)
         i += 1
         if i >= itr:
             break
+    pool.close()
+    pool.join()
 
     print("Finished loading sequence!\n") # DEBUG
-
-def save_con_comps(dir):
-    print("todo")
-    # TODO
 
 def visualize_tracked_img(img, colors, name):
     labeled_img = np.zeros_like(img)
@@ -158,18 +256,9 @@ def visualize_tracked_img(img, colors, name):
     # #cv2.waitKey()
 
 
-def load_tracked_masks(dir, format=mpar.TitleFormat.SCENE): # TODO DANIEL
-    print("load_tracked_masks\n")
-    tracked_paths = io_utils.load_paths(dir, format)
-    load_label_colors()
-    for tracked_path in tracked_paths:
-        tracked_img = img_utils.load_img(dir + "\\" + tracked_path, 1, False, False, float=False, normalize=False)
-        visualize_tracked_img(tracked_img, label_colors, io_utils.extract_name(tracked_path, format=format))
-
-
 def track_sequence():
     """
-    Calls Lineage Mapper to track connected components
+    Track connected components via Lineage Mapper
     """
     args = []
     #args = ['inputDirectory', '', 'outputDirectory', ''] # Enables overriding arguments such as input/output paths (without changing config)
@@ -273,6 +362,17 @@ def load_tracked_frame(interval, tracked_paths, opt_params, seq_paths, format=mp
     return frame
 
 def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
+    """
+    Loads frames after tracking.
+
+    Parameters
+    ----------
+    dir_tracked : str
+        Path to tracked images.
+    format : TitleFormat
+        Image title format.
+
+    """
     tracked_paths = io_utils.load_paths(dir_tracked, format=format)
     for interval in tracked_paths:
         frame = load_tracked_frame(interval, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths, format=format)
@@ -282,19 +382,20 @@ def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
     print("Finished loading sequence!\n")  # DEBUG
 
 def save_sequence_con_comps(comps_dir):
+    """
+    Save connected components generated from frame sequence.
+    Parameters
+    ----------
+    comps_dir : str
+        Path to save connected components.
+
+    Returns
+    -------
+
+    """
     for frame in sorted(seq_frames):
         print("saving" + comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")
-        io_utils.save_img(seq_frames[frame].con_comps, comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")  # TODO Remove
-        # # expand aux. channels + connected components
-        # if debug:
-        #     print("expanding connected components")
-        # seq_frames[frame].con_comps = iu.expand_img(seq_frames[frame].con_comps, pad_pixels=pad_pixels)
-        #
-        # for channel in seq_frames[frame].images:
-        #     if channel in aux_channel_types:
-        #         if debug:
-        #             print("expanding {} channel".format(channel))
-        #         seq_frames[frame].images[channel] = iu.expand_img(seq_frames[frame].images[channel], pad_pixels=pad_pixels)
+        io_utils.save_img(seq_frames[frame].con_comps, comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")
 
 def stabilize_sequence(debug = False, pad_pixels=30):
     aggr_shift_x = 0
@@ -468,13 +569,14 @@ if __name__ == "__main__":
     print("Started sequence loading\n")
 
     seq_paths = io_utils.load_paths(dir)
-    iterations = 3
+    iterations = 4
+    procs = 4
     debug = False
     file_format = mpar.TitleFormat.DATE
 
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
-    load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir, debug=debug, itr=iterations, format=mpar.TitleFormat.TRACK)
+    load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir, debug=debug, itr=iterations, format=mpar.TitleFormat.TRACK, procs=procs)
 
     print("Finished sequence Loading\n")
 
