@@ -224,7 +224,7 @@ def load_sequence(dir, ker_params, opt_params, comps_dir, format, debug=True, it
     pool.close()
     pool.join()
 
-    print("Finished loading sequence!\n")  # DEBUG
+    print("Finished loading sequence!\n") # DEBUG
 
 def visualize_tracked_img(img, colors, name):
     labeled_img = np.zeros_like(img)
@@ -260,15 +260,6 @@ def visualize_tracked_img(img, colors, name):
     # io_utils.save_img(labeled_img, "images\\seq_nec\\concomps\\col_track\\" + name + ".png")  # TODO Remove
     # #cv2.imshow('labeled.png', labeled_img)
     # #cv2.waitKey()
-
-
-def load_tracked_masks(dir, format=mpar.TitleFormat.SCENE):  # TODO DANIEL
-    print("load_tracked_masks\n")
-    tracked_paths = io_utils.load_paths(dir, format)
-    load_label_colors()
-    for tracked_path in tracked_paths:
-        tracked_img = img_utils.load_img(dir + "\\" + tracked_path, 1, False, False, float=False, normalize=False)
-        visualize_tracked_img(tracked_img, label_colors, io_utils.extract_name(tracked_path, format=format))
 
 
 def track_sequence():
@@ -398,7 +389,6 @@ def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
         seq_frames[frame.id] = frame
 
     print("Finished loading sequence!\n")  # DEBUG
-
 
 def save_sequence_con_comps(comps_dir):
     """
@@ -607,6 +597,7 @@ def debug_channels(dir, channels):
 
 
 if __name__ == "__main__":
+
     """img_to_align = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
     img_ref = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
     pr.align_img(img_to_align,img_ref)"""
@@ -624,7 +615,7 @@ if __name__ == "__main__":
     print("Started sequence loading\n")
 
     seq_paths = io_utils.load_paths(dir)
-    iterations = 500
+    iterations = 15
     procs = 4
     debug = False
     file_format = mpar.TitleFormat.DATE
@@ -644,7 +635,7 @@ if __name__ == "__main__":
     print("Saving connected components...\n")
 
     save_sequence_con_comps(comps_dir)
-    exit()
+    #exit()
 
     print("Started sequence tracking\n")
 
