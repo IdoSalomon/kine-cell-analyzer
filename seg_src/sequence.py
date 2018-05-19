@@ -1,29 +1,25 @@
+import multiprocessing as mp
 import os
 import random
+import subprocess
+from multiprocessing import Pool
+from typing import Tuple
 
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 
 import cell
-import img_utils
-import img_utils as iu
-import misc_params
-import sequence_ext as ext
-import numpy as np
-import prec_sparse as ps
-import process as pr
-import frame as fr
-import io_utils
-import subprocess
 import cell as cl
+import frame as fr
+import img_utils
+import io_utils
 import misc_params as mpar
-import matplotlib.pyplot as plt
-import itertools
-import multiprocessing as mp
+import process as pr
+import sequence_ext as ext
+from prec_params import KerParams, OptParams
 
 seq_paths = {}  # Paths to all sequence images
-from prec_params import KerParams, OptParams
-from typing import Tuple
-from multiprocessing import Pool
 
 seq_paths = {}  # Paths to all sequence images
 
