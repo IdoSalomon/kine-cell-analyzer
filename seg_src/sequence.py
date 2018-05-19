@@ -42,6 +42,8 @@ cells_frames = {}  # dictionary <int, list<int>> that holds IDs of frame in whic
 
 cells_trans = {}  # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
 
+diff: int = {}
+
 
 def create_stack(chan_paths, opt_params):
     """
@@ -417,7 +419,7 @@ def save_sequence_con_comps(comps_dir):
         io_utils.save_img(seq_frames[frame].con_comps, comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")
 
 
-def stabilize_sequence(debug=False, pad_pixels=30):
+def stabilize_sequence(debug=False, procs=2, pad_pixels=25):
     aggr_shift_x = 0
     aggr_shift_y = 0
     shifts = {1: (0, 0)}
@@ -440,7 +442,7 @@ def stabilize_sequence(debug=False, pad_pixels=30):
         prev_phase = np.float32(seq_frames[frame - 1].images[phase_chan])
         rows, cols = phase.shape
 
-        final_shift = calc_shift(prev_phase, phase, 30)
+        final_shift = calc_shift(prev_phase, phase, max_shift=30, procs=procs)
         final_shift = (final_shift[0] + aggr_shift_x, final_shift[1] + aggr_shift_y)
         shifts[frame] = final_shift
         print("aggregated shift = {}".format(final_shift))
@@ -476,19 +478,28 @@ def stabilize_sequence(debug=False, pad_pixels=30):
                     plt.imshow(seq_frames[frame].images[channel])
                     plt.show()
 
-def calc_shift(prev: np.ndarray, cur: np.ndarray, max_shift: int = 1) -> Tuple[int, int]:
-    diff: int = {}
-
+def calc_shift(prev: np.ndarray, cur: np.ndarray, max_shift: int = 1, procs=2) -> Tuple[int, int]:
+    pool = mp.Pool(processes=procs)
     for x in range(-max_shift, max_shift + 1):
         for y in range(-max_shift, max_shift + 1):
-            shifted = np.roll(cur, y, axis=0)
-            shifted = np.roll(shifted, x, axis=1)
-            diff[x, y] = np.sum(np.sum(np.abs(shifted - prev)))
+            pool.apply_async(calc_diff_shifted, args=(prev, cur, x, y), callback=diff_result_cb)
+            # shifted = np.roll(cur, y, axis=0)
+            # shifted = np.roll(shifted, x, axis=1)
+            # diff[x, y] = np.sum(np.sum(np.abs(shifted - prev)))
+    pool.close()
+    pool.join()
     opt_shift = min(diff, key=diff.get)
     print("optimal shift = {}".format(opt_shift))
     print("diff = {}".format(diff[opt_shift]))
     return opt_shift
 
+def calc_diff_shifted(prev, cur, x, y):
+    shifted = np.roll(cur, y, axis=0)
+    shifted = np.roll(shifted, x, axis=1)
+    return ((x, y) ,np.sum(np.sum(np.abs(shifted - prev))))
+
+def diff_result_cb(result):
+    diff[result[0]] = result[1]
 
 def translate_img(img: np.ndarray, shift_x: int, shift_y: int) -> np.ndarray:
     if shift_x == 0 and shift_y == 0:
@@ -625,7 +636,7 @@ if __name__ == "__main__":
 
     seq_paths = io_utils.load_paths(dir)
     iterations = 500
-    procs = 4
+    procs = 2
     debug = False
     file_format = mpar.TitleFormat.DATE
 
@@ -637,14 +648,13 @@ if __name__ == "__main__":
 
     print("Started sequence stabilization\n")
 
-    stabilize_sequence(True);
+    stabilize_sequence(True, procs);
 
     print("Finished sequence stabilization\n")
 
     print("Saving connected components...\n")
 
     save_sequence_con_comps(comps_dir)
-    exit()
 
     print("Started sequence tracking\n")
 
