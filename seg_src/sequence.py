@@ -572,22 +572,24 @@ def analyze_channels(channels):
                     if frame_id in cells_frames[cell]:
                         label = seq_frames[frame_id].cells[cell].global_label
                         # if cell is color has changed - update db
-                        if check_changed(frame_id, frame_bg, label, channel):
+                        if check_changed(frame_id=frame_id, label=label, channel=channel):
                             if cell not in cells_trans:
                                 cells_trans[cell] = {}
                             cells_trans[cell][channel] = frame_id
                             break
 
 
-def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.5):  # TODO change threshold
+def check_changed(frame_id, label, channel, thresh_change=0.03):  # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
 
     pixels = cell.pixel_values[channel]
+    thresh_color = np.percentile(seq_frames[frame_id].images[channel], 99.9)
+    # TODO 1) OPENCV Triangle thresh. 2) Find connected components on triangle thresh. 3) if too many/too big compared to previous frame, use 0.99 percentile.
     # cell_mean = np.mean(cell.pixel_values[channel])
     cell_area = pixels.size
-    cell_colored = np.sum(pixels) / 255
+    cell_colored = np.sum(pixels[pixels > thresh_color]) / 255
     # cell_colored = pixels.size
     cell_intensity = cell_colored / cell_area
     # cell_intensity = cell_colored
@@ -615,7 +617,7 @@ def debug_channels(dir, channels):
         os.makedirs(dir)
 
     for channel in channels:
-        for frame_id in range(1, max(seq_frames)):
+        for frame_id in range(1, max(seq_frames) + 1):
             frame_chan = seq_frames[frame_id].images[channel]
             dbg_frame = np.zeros_like(frame_chan)
             for cell in seq_frames[frame_id].cells:
@@ -631,12 +633,12 @@ def debug_channels(dir, channels):
             io_utils.save_img(seq_frames[frame_id].images[channel], thresh_path, uint8=True)
 
             # Visualize stack
-            for channel in seg_channel_types:
+            for chan in seg_channel_types:
                 frame = seq_frames[frame_id]
                 images = frame.images
                 masks = frame.masks
                 tracked = frame.tracked_img
-                if channel in masks:
+                if chan in masks:
                     b = cv2.normalize(tracked, None, 0, 255, cv2.NORM_MINMAX)
                     g = cv2.normalize(images["fitc"], None, 0, 100, cv2.NORM_MINMAX)
                     r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
@@ -662,8 +664,8 @@ if __name__ == "__main__":
     # load_tracked_masks("images\\seq_nec\\tracked")
     print("Started sequence loading\n")
 
-    iterations = 20
-    procs = 2
+    iterations = 15
+    procs = 4
     debug = False
     file_format = mpar.TitleFormat.DATE
 
@@ -676,7 +678,7 @@ if __name__ == "__main__":
 
     print("Started sequence stabilization\n")
 
-    stabilize_sequence(True, procs)
+    stabilize_sequence(debug, procs)
 
     print("Finished sequence stabilization\n")
 
