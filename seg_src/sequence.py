@@ -22,20 +22,25 @@ import multiprocessing as mp
 
 seq_paths = {} # Paths to all sequence images
 from prec_params import KerParams, OptParams
+from typing import Tuple
+from multiprocessing import Pool
 
-seq_frames = {} # dictionary <int,Frame> that holds all frames in sequence by number
+seq_paths = {}  # Paths to all sequence images
 
-label_colors = {} # dictionary <int, int> that holds constant colors for each labelled cells
+seq_frames = {}  # dictionary <int,Frame> that holds all frames in sequence by number
 
-channel_types = ["GFP", "FITC", "fitc", "pi", "PI", "PHASE", "phase", "TxRed", "TRANS", "trans"] # different channels in sequence TODO turn to user input
+label_colors = {}  # dictionary <int, int> that holds constant colors for each labelled cells
 
-seg_channel_types = ["PHASE", "TRANS", "phase"] # different channels in sequence to segment TODO turn to user input
+channel_types = ["GFP", "FITC", "fitc", "pi", "PI", "PHASE", "phase", "TxRed", "TRANS",
+                 "trans"]  # different channels in sequence TODO turn to user input
+
+seg_channel_types = ["PHASE", "TRANS", "phase"]  # different channels in sequence to segment TODO turn to user input
 
 aux_channel_types = ["GFP", "TxRed", "fitc", "FITC", "PI", "pi"]
 
-cells_frames = {} # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
+cells_frames = {}  # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
 
-cells_trans = {} # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
+cells_trans = {}  # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
 
 
 def create_stack(chan_paths, opt_params):
@@ -154,11 +159,12 @@ def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, d
             b = cv2.normalize(con_comp[1], None, 0, 255, cv2.NORM_MINMAX)
             g = cv2.normalize(images["fitc"], None, 0, 255, cv2.NORM_MINMAX)
             r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
-            vis = np.dstack((b, g, r)) # TODO change so it will work for seq_nec
+            vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
             vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
             cv2.imwrite(comps_dir + '\\' + 'vis\\' + interval + ".tif", vis)
 
-    frame = fr.Frame(id=io_utils.extract_num(interval,format=format), title=interval, images=images, masks=masks, con_comps=con_comp[1])
+    frame = fr.Frame(id=io_utils.extract_num(interval, format=format), title=interval, images=images, masks=masks,
+                     con_comps=con_comp[1])
     print("Loaded frame {}\n".format(interval))
 
     return frame
@@ -218,7 +224,7 @@ def load_sequence(dir, ker_params, opt_params, comps_dir, format, debug=True, it
     pool.close()
     pool.join()
 
-    print("Finished loading sequence!\n") # DEBUG
+    print("Finished loading sequence!\n")  # DEBUG
 
 def visualize_tracked_img(img, colors, name):
     labeled_img = np.zeros_like(img)
@@ -256,12 +262,21 @@ def visualize_tracked_img(img, colors, name):
     # #cv2.waitKey()
 
 
+def load_tracked_masks(dir, format=mpar.TitleFormat.SCENE):  # TODO DANIEL
+    print("load_tracked_masks\n")
+    tracked_paths = io_utils.load_paths(dir, format)
+    load_label_colors()
+    for tracked_path in tracked_paths:
+        tracked_img = img_utils.load_img(dir + "\\" + tracked_path, 1, False, False, float=False, normalize=False)
+        visualize_tracked_img(tracked_img, label_colors, io_utils.extract_name(tracked_path, format=format))
+
+
 def track_sequence():
     """
     Track connected components via Lineage Mapper
     """
     args = []
-    #args = ['inputDirectory', '', 'outputDirectory', ''] # Enables overriding arguments such as input/output paths (without changing config)
+    # args = ['inputDirectory', '', 'outputDirectory', ''] # Enables overriding arguments such as input/output paths (without changing config)
     subprocess.call(['java', '-jar', 'lib\Lineage_Mapper\Lineage_Mapper.jar'] + args, shell=True)
 
 
@@ -294,7 +309,7 @@ def get_tracked_cells(tracked_img, images, frame_id):
         for channel in images:
             channels_pixels[channel] = (images[channel])[tracked_img == label]
         first_elemnt = np.argwhere(tracked_img == label)[0]
-        centroid = (first_elemnt[1], first_elemnt[0]) # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
+        centroid = (first_elemnt[1], first_elemnt[0])  # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
         cells[label] = cell
 
@@ -305,6 +320,7 @@ def get_tracked_cells(tracked_img, images, frame_id):
             cells_frames[label].append(frame_id)
 
     return cells
+
 
 def load_tracked_mask(tracked_path, opt_params):
     """
@@ -350,9 +366,9 @@ def load_tracked_frame(interval, tracked_paths, opt_params, seq_paths, format=mp
     if interval.startswith("trk-"):
         interval = interval[4:]
     frame_id = io_utils.extract_num(interval, format)
-    images = create_stack(seq_paths[interval], opt_params=opt_params) # original channels
-    tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params) # image after tracking
-    cells = get_tracked_cells(tracked_img=tracked_img, images=images, frame_id=frame_id) # image's cell representation
+    images = create_stack(seq_paths[interval], opt_params=opt_params)  # original channels
+    tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params)  # image after tracking
+    cells = get_tracked_cells(tracked_img=tracked_img, images=images, frame_id=frame_id)  # image's cell representation
 
     frame = seq_frames[frame_id]
     frame.tracked_img = tracked_img
@@ -360,6 +376,7 @@ def load_tracked_frame(interval, tracked_paths, opt_params, seq_paths, format=mp
 
     print("Loaded tracked frame {}\n".format(interval))
     return frame
+
 
 def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
     """
@@ -375,11 +392,13 @@ def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
     """
     tracked_paths = io_utils.load_paths(dir_tracked, format=format)
     for interval in tracked_paths:
-        frame = load_tracked_frame(interval, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths, format=format)
+        frame = load_tracked_frame(interval, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths,
+                                   format=format)
 
         seq_frames[frame.id] = frame
 
     print("Finished loading sequence!\n")  # DEBUG
+
 
 def save_sequence_con_comps(comps_dir):
     """
@@ -397,9 +416,14 @@ def save_sequence_con_comps(comps_dir):
         print("saving" + comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")
         io_utils.save_img(seq_frames[frame].con_comps, comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")
 
-def stabilize_sequence(debug = False, pad_pixels=30):
+
+def stabilize_sequence(debug=False, pad_pixels=30):
     aggr_shift_x = 0
     aggr_shift_y = 0
+    shifts = {1: (0, 0)}
+    crop_right = crop_left = crop_bottom = crop_top = 0
+
+    # find optimal shifts
     for frame in sorted(seq_frames):
         if frame == 1:
             continue
@@ -413,63 +437,93 @@ def stabilize_sequence(debug = False, pad_pixels=30):
         shift_cost = {}
         phase_chan = [x for x in seq_frames[frame].images if x in seg_channel_types][0]
         phase = np.float32(seq_frames[frame].images[phase_chan])
-        prev_phase = np.float32(seq_frames[frame-1].images[phase_chan])
+        prev_phase = np.float32(seq_frames[frame - 1].images[phase_chan])
         rows, cols = phase.shape
 
-        # for x in range(-pad_pixels, pad_pixels):
-        #     for y in range(-pad_pixels, pad_pixels):
-        #         if x==29 and y == 29:
-        warp_matrix = []
-        pre_shift = (0,0)
-        is_found = False
-        try:
-            warp_matrix = pr.align_img(phase, prev_phase)
-            print("align_img successful, no need to shift before calling")
-        except:
-            print("align_img failed, trying to shift before calling")
-            for i in range(5, 35, 5):
-                if is_found:
-                    break
-                shifts = [x for x in itertools.product([0, i, -i], repeat=2)]
-                for shift in shifts:
-                    print("trying shift {}".format(shift))
-                    M = np.float32([[1, 0, shift[0]], [0, 1, shift[1]]])
-                    shifted =  cv2.warpAffine(phase ,M , (cols, rows), flags=cv2.WARP_INVERSE_MAP)
-                    try:
-                        warp_matrix = pr.align_img(shifted, prev_phase)
-                    except:
-                        continue
-                    is_found = True
-                    pre_shift = shift
-                    print("pre-shift is {}".format(pre_shift))
-                    break
+        final_shift = calc_shift(prev_phase, phase, 30)
+        final_shift = (final_shift[0] + aggr_shift_x, final_shift[1] + aggr_shift_y)
+        shifts[frame] = final_shift
+        print("aggregated shift = {}".format(final_shift))
 
-        shiftx, shifty = (int(round(warp_matrix[0][2])), int(round(warp_matrix[1][2])))
-        print("align_img return shift: {}".format((warp_matrix[0][2] , warp_matrix[1][2])))
-        final_shift = (int(round(warp_matrix[0][2] + pre_shift[0] + aggr_shift_x)) ,int(round(warp_matrix[1][2] + pre_shift[1] + aggr_shift_y)))
-        print("final shift: {}".format(final_shift))
+        # update cropping
+        if final_shift[0] > 0:
+            crop_left = max(crop_left, final_shift[0])
+        else:
+            crop_right = max(crop_right, abs(final_shift[0]))
+        if final_shift[1] > 0:
+            crop_top = max(crop_top, final_shift[1])
+        else:
+            crop_bottom = max(crop_bottom, abs(final_shift[1]))
 
-        warp_matrix[0][2] = aggr_shift_x = final_shift[0]
-        warp_matrix[1][2] = aggr_shift_y =  final_shift[1]
+        aggr_shift_x, aggr_shift_y = final_shift
 
-        # shift connected components
-        seq_frames[frame].con_comps = cv2.warpAffine(np.float32(seq_frames[frame].con_comps) ,warp_matrix , (cols, rows), flags=cv2.WARP_INVERSE_MAP)
-        plt.imshow(seq_frames[frame].con_comps)
-        plt.show()
+    print("cropping: top: {}, bottom: {}, left: {}, right: {}".format(crop_top, crop_bottom, crop_left, crop_right))
+
+    # shift and crop frames
+    for frame in sorted(seq_frames):
+        shifted = translate_img(seq_frames[frame].con_comps, shifts[frame][0], shifts[frame][1])
+        seq_frames[frame].con_comps = crop_img(shifted, crop_right, crop_left, crop_top, crop_bottom)
+        if debug:
+            plt.imshow(seq_frames[frame].con_comps)
+            plt.show()
 
         # shift aux channels
         for channel in seq_frames[frame].images:
             if channel in aux_channel_types:
-                seq_frames[frame].images[channel] = cv2.warpAffine(np.float32(seq_frames[frame].images[channel]) ,warp_matrix , (cols, rows), flags=cv2.WARP_INVERSE_MAP)
+                shifted = translate_img(seq_frames[frame].images[channel], shifts[frame][0], shifts[frame][1])
+                seq_frames[frame].images[channel] = crop_img(shifted, crop_right, crop_left, crop_top, crop_bottom)
                 if debug:
                     plt.imshow(seq_frames[frame].images[channel])
                     plt.show()
 
-        #shift_cost[x, y] = sum(con_comps - shifted_xy)
-        #print(min(shift_cost.values()))
+def calc_shift(prev: np.ndarray, cur: np.ndarray, max_shift: int = 1) -> Tuple[int, int]:
+    diff: int = {}
+
+    for x in range(-max_shift, max_shift + 1):
+        for y in range(-max_shift, max_shift + 1):
+            shifted = np.roll(cur, y, axis=0)
+            shifted = np.roll(shifted, x, axis=1)
+            diff[x, y] = np.sum(np.sum(np.abs(shifted - prev)))
+    opt_shift = min(diff, key=diff.get)
+    print("optimal shift = {}".format(opt_shift))
+    print("diff = {}".format(diff[opt_shift]))
+    return opt_shift
 
 
+def translate_img(img: np.ndarray, shift_x: int, shift_y: int) -> np.ndarray:
+    if shift_x == 0 and shift_y == 0:
+        return img
+    rows, cols = img.shape
 
+    shifted = np.roll(img, shift_y, axis=0)
+    shifted = np.roll(shifted, shift_x, axis=1)
+
+    # nullify overflowing elements
+    if shift_x > 0:
+        shifted[:, :shift_x] = 0
+    else:
+        shifted[:, cols + shift_x:cols] = 0
+
+    if shift_y > 0:
+        shifted[:shift_y, :] = 0
+    else:
+        shifted[rows + shift_y: rows, :] = 0
+
+    return shifted
+
+
+def crop_img(img: np.ndarray, right: int, left: int, top: int, bottom: int) -> np.ndarray:
+    rows, cols = img.shape
+
+    img[:, :left] = 0
+
+    img[:, cols - right: cols] = 0
+
+    img[:top, :] = 0
+
+    img[rows - bottom: rows, :] = 0
+
+    return img
 
 def analyze_channels(channels):
     """
@@ -487,7 +541,7 @@ def analyze_channels(channels):
 
         # iterate over first frame identified cells
         for cell in cells_frames:
-            if cell != 0: # skip background label
+            if cell != 0:  # skip background label
                 # iterate over next frames
                 for frame_id in range(2, max(seq_frames)):
                     if frame_id in cells_frames[cell]:
@@ -500,7 +554,7 @@ def analyze_channels(channels):
                             break
 
 
-def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.3): # TODO change threshold
+def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.3):  # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
@@ -508,15 +562,16 @@ def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.3): # TO
     pixels = cell.pixel_values[channel]
     # cell_mean = np.mean(cell.pixel_values[channel])
     cell_area = pixels.size
-    #cell_colored = np.sum(pixels) / 256
+    # cell_colored = np.sum(pixels) / 256
     cell_colored = pixels[pixels > 15].size
     cell_intensity = cell_colored / cell_area
-    #cell_intensity = cell_colored
+    # cell_intensity = cell_colored
 
     if cell_intensity > thresh_change:
         return True
     else:
         return False
+
 
 def debug_channels(dir, channels):
     """
@@ -543,7 +598,8 @@ def debug_channels(dir, channels):
                     if cells_trans[cell][channel] <= frame_id:
                         cell_mask = seq_frames[frame_id].tracked_img == cell
                         dbg_frame[cell_mask] = 255
-                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 190, 2)
+                        cv2.putText(dbg_frame, str(cell), seq_frames[frame_id].cells[cell].centroid,
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, 190, 2)
             path = dir + "\\" + channel + str(frame_id) + ".png"
             thresh_path = dir + "\\" + channel + str(frame_id) + "_THRESH.png"
             io_utils.save_img(dbg_frame, path, uint8=True)
@@ -551,7 +607,6 @@ def debug_channels(dir, channels):
 
 
 if __name__ == "__main__":
-
     """img_to_align = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
     img_ref = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
     pr.align_img(img_to_align,img_ref)"""
@@ -569,7 +624,7 @@ if __name__ == "__main__":
     print("Started sequence loading\n")
 
     seq_paths = io_utils.load_paths(dir)
-    iterations = 4
+    iterations = 500
     procs = 4
     debug = False
     file_format = mpar.TitleFormat.DATE
@@ -589,6 +644,7 @@ if __name__ == "__main__":
     print("Saving connected components...\n")
 
     save_sequence_con_comps(comps_dir)
+    exit()
 
     print("Started sequence tracking\n")
 
@@ -609,8 +665,7 @@ if __name__ == "__main__":
     debug_channels("dbg\\L136\\A2\\4", ["fitc", "PI"])
 
     print("Finished debug_channels\n")
-    
+
     # load_tracked_masks("images\\seq_nec\\concomps\\track", opt_params)
 
-
-#save_con_comps()
+# save_con_comps()
