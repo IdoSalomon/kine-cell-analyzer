@@ -43,6 +43,7 @@ def get_gradient(img):
     return grad
 
 def align_img(img_to_align, img_ref, thresh=1e-7, warp_mode=cv2.MOTION_TRANSLATION):
+    img_to_align = np.copy(img_to_align)
     # Find the width and height of the image
     height, width = img_ref.shape
 
@@ -58,6 +59,7 @@ def align_img(img_to_align, img_ref, thresh=1e-7, warp_mode=cv2.MOTION_TRANSLATI
     # Find warp matrix for alignment
     (cc, warp_matrix) = cv2.findTransformECC(get_gradient(img_ref), get_gradient(img_to_align),
                                              warp_matrix, warp_mode, criteria)
+
     # Warp
     if warp_mode == cv2.MOTION_HOMOGRAPHY:
         # Use Perspective warp when the transformation is a Homography
