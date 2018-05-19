@@ -158,12 +158,6 @@ def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, d
     for channel in seg_channel_types:
         if channel in masks:
             con_comp = pr.get_connected_components(masks[channel], grayscale=True, debug=debug)
-            b = cv2.normalize(con_comp[1], None, 0, 255, cv2.NORM_MINMAX)
-            g = cv2.normalize(images["fitc"], None, 0, 255, cv2.NORM_MINMAX)
-            r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
-            vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
-            vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
-            cv2.imwrite(comps_dir + '\\' + 'vis\\' + interval + ".tif", vis)
 
     frame = fr.Frame(id=io_utils.extract_num(interval, format=format), title=interval, images=images, masks=masks,
                      con_comps=con_comp[1])
@@ -176,6 +170,26 @@ def load_label_colors():
     for i in range(1, 2000):
         label_colors[i] = random.randint(1, 255)
 
+def aggr_procs_tracked(result):
+    """
+    Aggregates results of processes loading the trackd frames.
+
+    Parameters
+    ----------
+    result : Frame
+        frame to aggregate
+
+    """
+    frame = result
+    # Add frame to collection
+    seq_frames[frame.id] = frame
+
+    # Assign frame to global label
+    for label in result.cells:
+        if label not in cells_frames:
+            cells_frames[label] = [frame.id]
+        else:
+            cells_frames[label].append(frame.id)
 
 def aggr_procs(result):
     """
@@ -306,11 +320,7 @@ def get_tracked_cells(tracked_img, images, frame_id):
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
         cells[label] = cell
 
-        # Assign frame to global label
-        if label not in cells_frames:
-            cells_frames[label] = [frame_id]
-        else:
-            cells_frames[label].append(frame_id)
+
 
     return cells
 
@@ -336,7 +346,7 @@ def load_tracked_mask(tracked_path, opt_params):
         return img_utils.load_img(tracked_path[0], 1, False, False, float=False, normalize=False)
 
 
-def load_tracked_frame(interval, tracked_paths, opt_params, seq_paths, format=mpar.TitleFormat.TRACK):
+def load_tracked_frame(interval, tracked_paths, opt_params, seq_frames, format=mpar.TitleFormat.TRACK):
     """
     Loads frame.
 
@@ -359,11 +369,14 @@ def load_tracked_frame(interval, tracked_paths, opt_params, seq_paths, format=mp
     if interval.startswith("trk-"):
         interval = interval[4:]
     frame_id = io_utils.extract_num(interval, format)
-    images = create_stack(seq_paths[interval], opt_params=opt_params)  # original channels
+    frame = seq_frames[frame_id] # Original frame
+    # Normalize channels
+    for chan in frame.images:
+        chan_img = frame.images[chan]
+        frame.images[chan] = cv2.normalize(chan_img, None, 0, 255, cv2.NORM_MINMAX)
     tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params)  # image after tracking
-    cells = get_tracked_cells(tracked_img=tracked_img, images=images, frame_id=frame_id)  # image's cell representation
+    cells = get_tracked_cells(tracked_img=tracked_img, images=frame.images, frame_id=frame_id)  # image's cell representation
 
-    frame = seq_frames[frame_id]
     frame.tracked_img = tracked_img
     frame.cells = cells
 
@@ -383,14 +396,15 @@ def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
         Image title format.
 
     """
+    pool = mp.Pool(processes=procs)
+    # Load all frames
     tracked_paths = io_utils.load_paths(dir_tracked, format=format)
     for interval in tracked_paths:
-        frame = load_tracked_frame(interval, opt_params=opt_params, seq_paths=seq_paths, tracked_paths=tracked_paths,
-                                   format=format)
+        pool.apply_async(load_tracked_frame, args=(interval, tracked_paths, opt_params, seq_frames, format),
+                         callback=aggr_procs_tracked)
 
-        seq_frames[frame.id] = frame
-
-    print("Finished loading sequence!\n")  # DEBUG
+    pool.close()
+    pool.join()
 
 def save_sequence_con_comps(comps_dir):
     """
@@ -424,7 +438,6 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25):
             print("stabilizing frame {}".format(frame))
 
         # step 2 - find shift vector in pixels for connected components
-        if debug:
             print("finding optimal shift")
         shift_cost = {}
         phase_chan = [x for x in seq_frames[frame].images if x in seg_channel_types][0]
@@ -558,7 +571,7 @@ def analyze_channels(channels):
                             break
 
 
-def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.3):  # TODO change threshold
+def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.5):  # TODO change threshold
 
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = seq_frames[frame_id].cells[label]
@@ -566,8 +579,8 @@ def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.3):  # T
     pixels = cell.pixel_values[channel]
     # cell_mean = np.mean(cell.pixel_values[channel])
     cell_area = pixels.size
-    # cell_colored = np.sum(pixels) / 256
-    cell_colored = pixels[pixels > 15].size
+    cell_colored = np.sum(pixels) / 255
+    #cell_colored = pixels.size
     cell_intensity = cell_colored / cell_area
     # cell_intensity = cell_colored
 
@@ -609,8 +622,23 @@ def debug_channels(dir, channels):
             io_utils.save_img(dbg_frame, path, uint8=True)
             io_utils.save_img(seq_frames[frame_id].images[channel], thresh_path, uint8=True)
 
+            # Visualize stack
+            for channel in seg_channel_types:
+                frame = seq_frames[frame_id]
+                images = frame.images
+                masks = frame.masks
+                tracked = frame.tracked_img
+                if channel in masks:
+                    b = cv2.normalize(tracked, None, 0, 255, cv2.NORM_MINMAX)
+                    g = cv2.normalize(images["fitc"], None, 0, 100, cv2.NORM_MINMAX)
+                    r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
+                    vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
+                    vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
+                    cv2.imwrite(comps_dir + '\\' + 'vis\\' + str(frame_id) + ".tif", vis)
+
 
 if __name__ == "__main__":
+
     """img_to_align = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
     img_ref = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
     pr.align_img(img_to_align,img_ref)"""
@@ -628,7 +656,7 @@ if __name__ == "__main__":
     print("Started sequence loading\n")
 
     seq_paths = io_utils.load_paths(dir)
-    iterations = 500
+    iterations = 15
     procs = 4
     debug = False
     file_format = mpar.TitleFormat.DATE
@@ -648,7 +676,7 @@ if __name__ == "__main__":
     print("Saving connected components...\n")
 
     save_sequence_con_comps(comps_dir)
-    exit()
+    #exit()
 
     print("Started sequence tracking\n")
 
