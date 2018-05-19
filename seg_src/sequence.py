@@ -42,7 +42,7 @@ cells_frames = {}  # dictionary <int, list<int>> that holds IDs of frame in whic
 
 cells_trans = {}  # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
 
-diff: int = {}
+diff = {}
 
 
 def create_stack(chan_paths, opt_params):
@@ -445,7 +445,7 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25):
         prev_phase = np.float32(seq_frames[frame - 1].images[phase_chan])
         rows, cols = phase.shape
 
-        final_shift = calc_shift(prev_phase, phase, max_shift=30, procs=procs)
+        final_shift = calc_shift(prev_phase, phase, max_shift=25, procs=4)
         final_shift = (final_shift[0] + aggr_shift_x, final_shift[1] + aggr_shift_y)
         shifts[frame] = final_shift
         print("aggregated shift = {}".format(final_shift))
@@ -482,13 +482,14 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25):
                     plt.show()
 
 def calc_shift(prev: np.ndarray, cur: np.ndarray, max_shift: int = 1, procs=2) -> Tuple[int, int]:
+    diff.clear()
     pool = mp.Pool(processes=procs)
-    for x in range(-max_shift, max_shift + 1):
-        for y in range(-max_shift, max_shift + 1):
-            pool.apply_async(calc_diff_shifted, args=(prev, cur, x, y), callback=diff_result_cb)
-            # shifted = np.roll(cur, y, axis=0)
-            # shifted = np.roll(shifted, x, axis=1)
-            # diff[x, y] = np.sum(np.sum(np.abs(shifted - prev)))
+
+    coords = [(x,y) for x in range(-max_shift, max_shift + 1) for y in range(-max_shift, max_shift + 1)]
+    coords = np.array_split(coords, procs)
+    for i in range(procs):
+        pool.apply_async(calc_diff_shifted, args=(prev, cur, coords[i]), callback=diff_result_cb)
+
     pool.close()
     pool.join()
     opt_shift = min(diff, key=diff.get)
@@ -496,11 +497,14 @@ def calc_shift(prev: np.ndarray, cur: np.ndarray, max_shift: int = 1, procs=2) -
     print("diff = {}".format(diff[opt_shift]))
     return opt_shift
 
-
-def calc_diff_shifted(prev, cur, x, y):
-    shifted = np.roll(cur, y, axis=0)
-    shifted = np.roll(shifted, x, axis=1)
-    return ((x, y) ,np.sum(np.sum(np.abs(shifted - prev))))
+def calc_diff_shifted(prev, cur, coords):
+    costs = {}
+    for (x, y) in coords:
+        shifted = np.roll(cur, y, axis=0)
+        shifted = np.roll(shifted, x, axis=1)
+        costs[x,y] = np.sum(np.sum(np.abs(shifted - prev)))
+    opt_shift = min(costs, key=costs.get)
+    return (opt_shift, costs[opt_shift])
 
 
 def diff_result_cb(result):
@@ -656,8 +660,8 @@ if __name__ == "__main__":
     print("Started sequence loading\n")
 
     seq_paths = io_utils.load_paths(dir)
-    iterations = 15
-    procs = 4
+    iterations = 20
+    procs = 2
     debug = False
     file_format = mpar.TitleFormat.DATE
 
