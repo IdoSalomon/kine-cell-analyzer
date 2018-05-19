@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import itertools
 import multiprocessing as mp
 
-seq_paths = {} # Paths to all sequence images
+seq_paths = {}  # Paths to all sequence images
 from prec_params import KerParams, OptParams
 from typing import Tuple
 from multiprocessing import Pool
@@ -100,9 +100,10 @@ def create_masks(channels, ker_params, opt_params, interval, debug):
     """
     chans = {}
     for channel in channels:
-        if channel in seg_channel_types: # Create masks only for selected channels
+        if channel in seg_channel_types:  # Create masks only for selected channels
             # Segment
-            chans[channel] = pr.seg_phase(channels[channel], despeckle_size=1, dev_thresh=2, ker_params=ker_params, opt_params=opt_params, file_name=interval, debug=debug)
+            chans[channel] = pr.seg_phase(channels[channel], despeckle_size=1, dev_thresh=2, ker_params=ker_params,
+                                          opt_params=opt_params, file_name=interval, debug=debug)
     return chans
 
 
@@ -170,6 +171,7 @@ def load_label_colors():
     for i in range(1, 2000):
         label_colors[i] = random.randint(1, 255)
 
+
 def aggr_procs_tracked(result):
     """
     Aggregates results of processes loading the trackd frames.
@@ -190,6 +192,7 @@ def aggr_procs_tracked(result):
             cells_frames[label] = [frame.id]
         else:
             cells_frames[label].append(frame.id)
+
 
 def aggr_procs(result):
     """
@@ -233,14 +236,16 @@ def load_sequence(dir, ker_params, opt_params, comps_dir, format, debug=True, it
 
     # Load all frames
     for interval in seq_paths:
-        pool.apply_async(load_frame, args=(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug), callback=aggr_procs)
+        pool.apply_async(load_frame, args=(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug),
+                         callback=aggr_procs)
         i += 1
         if i >= itr:
             break
     pool.close()
     pool.join()
 
-    print("Finished loading sequence!\n") # DEBUG
+    print("Finished loading sequence!\n")  # DEBUG
+
 
 def visualize_tracked_img(img, colors, name):
     labeled_img = np.zeros_like(img)
@@ -320,8 +325,6 @@ def get_tracked_cells(tracked_img, images, frame_id):
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
         cells[label] = cell
 
-
-
     return cells
 
 
@@ -369,13 +372,14 @@ def load_tracked_frame(interval, tracked_paths, opt_params, seq_frames, format=m
     if interval.startswith("trk-"):
         interval = interval[4:]
     frame_id = io_utils.extract_num(interval, format)
-    frame = seq_frames[frame_id] # Original frame
+    frame = seq_frames[frame_id]  # Original frame
     # Normalize channels
     for chan in frame.images:
         chan_img = frame.images[chan]
         frame.images[chan] = cv2.normalize(chan_img, None, 0, 255, cv2.NORM_MINMAX)
     tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params)  # image after tracking
-    cells = get_tracked_cells(tracked_img=tracked_img, images=frame.images, frame_id=frame_id)  # image's cell representation
+    cells = get_tracked_cells(tracked_img=tracked_img, images=frame.images,
+                              frame_id=frame_id)  # image's cell representation
 
     frame.tracked_img = tracked_img
     frame.cells = cells
@@ -405,6 +409,7 @@ def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
 
     pool.close()
     pool.join()
+
 
 def save_sequence_con_comps(comps_dir):
     """
@@ -437,7 +442,7 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25):
         if debug:
             print("stabilizing frame {}".format(frame))
 
-        # step 2 - find shift vector in pixels for connected components
+            # step 2 - find shift vector in pixels for connected components
             print("finding optimal shift")
         shift_cost = {}
         phase_chan = [x for x in seq_frames[frame].images if x in seg_channel_types][0]
@@ -481,11 +486,12 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25):
                     plt.imshow(seq_frames[frame].images[channel])
                     plt.show()
 
+
 def calc_shift(prev: np.ndarray, cur: np.ndarray, max_shift: int = 1, procs=2) -> Tuple[int, int]:
     diff.clear()
     pool = mp.Pool(processes=procs)
 
-    coords = [(x,y) for x in range(-max_shift, max_shift + 1) for y in range(-max_shift, max_shift + 1)]
+    coords = [(x, y) for x in range(-max_shift, max_shift + 1) for y in range(-max_shift, max_shift + 1)]
     coords = np.array_split(coords, procs)
     for i in range(procs):
         pool.apply_async(calc_diff_shifted, args=(prev, cur, coords[i]), callback=diff_result_cb)
@@ -497,12 +503,13 @@ def calc_shift(prev: np.ndarray, cur: np.ndarray, max_shift: int = 1, procs=2) -
     print("diff = {}".format(diff[opt_shift]))
     return opt_shift
 
+
 def calc_diff_shifted(prev, cur, coords):
     costs = {}
     for (x, y) in coords:
         shifted = np.roll(cur, y, axis=0)
         shifted = np.roll(shifted, x, axis=1)
-        costs[x,y] = np.sum(np.sum(np.abs(shifted - prev)))
+        costs[x, y] = np.sum(np.sum(np.abs(shifted - prev)))
     opt_shift = min(costs, key=costs.get)
     return (opt_shift, costs[opt_shift])
 
@@ -546,6 +553,7 @@ def crop_img(img: np.ndarray, right: int, left: int, top: int, bottom: int) -> n
 
     return img
 
+
 def analyze_channels(channels):
     """
 
@@ -554,7 +562,7 @@ def analyze_channels(channels):
 
     Parameters
     ----------
-    channels : str
+    channels : List<str>
         a string representation of the analyzed channeled, e.g 'GFP'
     """
     for channel in channels:
@@ -584,7 +592,7 @@ def check_changed(frame_id, frame_stat, label, channel, thresh_change=0.5):  # T
     # cell_mean = np.mean(cell.pixel_values[channel])
     cell_area = pixels.size
     cell_colored = np.sum(pixels) / 255
-    #cell_colored = pixels.size
+    # cell_colored = pixels.size
     cell_intensity = cell_colored / cell_area
     # cell_intensity = cell_colored
 
@@ -642,7 +650,6 @@ def debug_channels(dir, channels):
 
 
 if __name__ == "__main__":
-
     """img_to_align = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
     img_ref = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
     pr.align_img(img_to_align,img_ref)"""
@@ -659,7 +666,6 @@ if __name__ == "__main__":
     # load_tracked_masks("images\\seq_nec\\tracked")
     print("Started sequence loading\n")
 
-    seq_paths = io_utils.load_paths(dir)
     iterations = 20
     procs = 2
     debug = False
@@ -667,20 +673,21 @@ if __name__ == "__main__":
 
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
-    load_sequence(dir, ker_params=ker_params, opt_params=opt_params,comps_dir=comps_dir, debug=debug, itr=iterations, format=mpar.TitleFormat.TRACK, procs=procs)
+    load_sequence(dir, ker_params=ker_params, opt_params=opt_params, comps_dir=comps_dir, debug=debug, itr=iterations,
+                  format=mpar.TitleFormat.TRACK, procs=procs)
 
     print("Finished sequence Loading\n")
 
     print("Started sequence stabilization\n")
 
-    stabilize_sequence(True, procs);
+    stabilize_sequence(True, procs)
 
     print("Finished sequence stabilization\n")
 
     print("Saving connected components...\n")
 
     save_sequence_con_comps(comps_dir)
-    #exit()
+    # exit()
 
     print("Started sequence tracking\n")
 
