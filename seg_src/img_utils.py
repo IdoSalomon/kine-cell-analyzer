@@ -187,7 +187,7 @@ def is_noisy(img):
     #blurred = cv2.medianBlur(img, 2)
     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(img, connectivity=connectivity)
 
-    if np.argmax(stats[1:, cv2.CC_STAT_AREA]) > 300:
+    if np.argmax(stats[1:, cv2.CC_STAT_AREA]) > 300 or nb_components > 1000:
         return True
     return False
 
