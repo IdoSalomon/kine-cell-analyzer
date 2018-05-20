@@ -24,16 +24,10 @@ def save_debug_fig(images, fig_name, ncols=2, zoom = 3):
     fig.savefig(DBG_DIR + '/' + fig_name)
 
 
-def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan, green_chan, all_frames):
+def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_chan='fitc', all_frames=True):
     import numpy as np
     import matplotlib.pyplot as plt
     fig = plt.figure(figsize=(40, 8))  # 400 for full size
-
-    # TODO: get params
-    frames_No = 14
-    red_chan = 'PI'
-    green_chan = 'fitc'
-    all_frames = True
 
     if all_frames:
         context = cell_frames
@@ -42,7 +36,7 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan, green_chan, al
 
     # labels
 
-    cell_label = [i for i in sorted(context) if i < 100]
+    cell_label = [i for i in sorted(context) if i < 1000]
 
     first_appeared_filter = [min(cell_frames[i]) - 1 for i in cell_label]
 
@@ -66,6 +60,8 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan, green_chan, al
                     in cell_label]
 
     uncolored = [frames_No for i in range(len(cell_label))]
+    # TODO Add orange (red + green).
+    # FIXME Why can green appear after red? Red and green should stay until the end of detection(?).
 
     N = len(uncolored)
 
@@ -92,10 +88,10 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan, green_chan, al
         # if i == 5:
         plt.bar(ind, missing_filter, width, bottom=np.full(len(cell_label), i), color='white')
 
-    plt.ylabel('Frame No')
+    plt.ylabel('Frame No.')
     plt.title('Cell Kinematics Visualisation')
     plt.xticks(ind, [str(cell_label[i]) for i in range(len(uncolored))])
     plt.yticks(np.arange(0, frames_No, 1), np.arange(1, frames_No + 1, 1))
-    plt.legend((p0[0], p2[0], p3[0]), ('Uncolored', 'PI', 'fitc'))
+    plt.legend((p0[0], p2[0], p3[0]), ('Uncolored', 'fitc', 'PI'))
 
     plt.show()

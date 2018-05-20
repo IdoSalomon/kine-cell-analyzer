@@ -8,12 +8,12 @@ from typing import Tuple
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import ndimage
 import cell
 import cell as cl
 import frame as fr
 import img_utils
 import io_utils
+import debug_utils as dbg
 import misc_params as mpar
 import process as pr
 import sequence_ext as ext
@@ -587,8 +587,10 @@ def analyze_channels(channels):
                             break
 
 
-def check_changed(frame_id, label, channel, thresh_change=0.05):  # TODO change threshold
+def check_changed(frame_id, label, channel, thresh_change=0.1):  # TODO change threshold
     # TODO Special treatment for PI (lower threshold)
+    if channel == "PI":
+        thresh_change = 0.04
     frame = seq_frames[frame_id]
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = frame.cells[label]
@@ -621,6 +623,7 @@ def debug_channels(dir, channels):
     """
     if not os.path.exists(dir):
         os.makedirs(dir)
+    # TODO Investigate if PI "P" appears 1 frame after it's discovered.
 
     for channel in channels:
         for frame_id in range(1, max(seq_frames) + 1):
@@ -758,6 +761,8 @@ if __name__ == "__main__":
 
     print("Finished debug_channels\n")
 
-    # load_tracked_masks("images\\seq_nec\\concomps\\track", opt_params)
+    dbg.plot_kinematics(cell_frames=cells_frames, cell_trans=cells_trans, frames_No=14, red_chan='PI', green_chan='fitc', all_frames=False)
+
+    print("Finished plotting kinematics\n")
 
 # save_con_comps()

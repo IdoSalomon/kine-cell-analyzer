@@ -208,9 +208,8 @@ def seg_aux_chan(img, frame_id, channel):
     thresh_perc = np.percentile(img, 99.9)
     tmp, thresh = cv2.threshold(np.uint8(img), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_TRIANGLE)
     thresh_copy = np.copy(thresh)
-    if not img_utils.is_noisy(thresh):
-        thresh = ndimage.median_filter(thresh, size=(3,3))
-    else:
+    thresh = ndimage.median_filter(thresh, size=(3, 3))
+    if img_utils.is_noisy(thresh):
         tmp, thresh = cv2.threshold(np.uint8(img), thresh_perc, 255, cv2.THRESH_BINARY)
     thresh = pre_filter_far_cells(thresh, 2)
 
