@@ -429,7 +429,7 @@ def save_sequence_con_comps(comps_dir):
         io_utils.save_img(seq_frames[frame].con_comps, comps_dir + '\\' + str(seq_frames[frame].title) + ".tif")
 
 
-def stabilize_sequence(debug=False, procs=2, pad_pixels=25):
+def stabilize_sequence(debug=False, procs=2, pad_pixels=25, external=False):
     aggr_shift_x = 0
     aggr_shift_y = 0
     shifts = {1: (0, 0)}
@@ -472,11 +472,12 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25):
 
     # shift and crop frames
     for frame in sorted(seq_frames):
-        shifted = translate_img(seq_frames[frame].con_comps, shifts[frame][0], shifts[frame][1])
-        seq_frames[frame].con_comps = crop_img(shifted, crop_right, crop_left, crop_top, crop_bottom)
-        if debug:
-            plt.imshow(seq_frames[frame].con_comps)
-            plt.show()
+        if not external:
+            shifted = translate_img(seq_frames[frame].con_comps, shifts[frame][0], shifts[frame][1])
+            seq_frames[frame].con_comps = crop_img(shifted, crop_right, crop_left, crop_top, crop_bottom)
+            if debug:
+                plt.imshow(seq_frames[frame].con_comps)
+                plt.show()
 
         # shift aux channels
         for channel in seq_frames[frame].images:
@@ -644,7 +645,7 @@ def debug_channels(dir, channels):
             masks = frame.masks
             for chan in seg_channel_types:
                 tmp, concomps = cv2.threshold(np.uint8(frame.con_comps), 0, 255, cv2.THRESH_BINARY)
-                if chan in masks:
+                if chan == 'phase':
                     b = cv2.normalize(concomps, None, 0, 255, cv2.NORM_MINMAX)
                     g = cv2.normalize(images["fitc"], None, 0, 100, cv2.NORM_MINMAX)
                     r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
@@ -740,6 +741,7 @@ if __name__ == "__main__":
     else:
         print("Started loading external sequence\n")
         load_external(comps_dir, ker_params, opt_params, format=mpar.TitleFormat.TRACK)
+        stabilize_sequence(debug, procs, external=True)  # TODO: allow e
         print("Finished loading external sequence\n")
 
     print("Started loading tracked sequence\n")
