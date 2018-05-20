@@ -7,6 +7,7 @@ import io_utils
 import prec_sparse as ps
 import img_utils as iu
 from prec_params import KerParams, OptParams
+from scipy import ndimage
 
 """
 %load_ext cython
@@ -202,6 +203,22 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
         dbg.save_debug_fig(dbgImgs, file_name, zoom=5)
 
     return filtered
+
+def seg_aux_chan(img, frame_id, channel):
+    thresh_perc = np.percentile(img, 99.9)
+    tmp, thresh = cv2.threshold(np.uint8(img), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_TRIANGLE)
+    thresh_copy = np.copy(thresh)
+    if not img_utils.is_noisy(thresh):
+        thresh = ndimage.median_filter(thresh, size=(3,3))
+    else:
+        tmp, thresh = cv2.threshold(np.uint8(img), thresh_perc, 255, cv2.THRESH_BINARY)
+    thresh = pre_filter_far_cells(thresh, 2)
+
+    cv2.imwrite("dbg\\L136\\A2\\4\\aux_seg\\" + str(frame_id) + "_" + channel + "_copy" + ".tif", thresh_copy)
+
+    cv2.imwrite("dbg\\L136\\A2\\4\\aux_seg\\" + str(frame_id) + "_" + channel + ".tif", thresh)
+
+    return thresh
 
 def get_connected_components(img, grayscale=True, debug=True):
 

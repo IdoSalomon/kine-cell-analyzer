@@ -8,7 +8,7 @@ from typing import Tuple
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-
+from scipy import ndimage
 import cell
 import cell as cl
 import frame as fr
@@ -311,7 +311,11 @@ def get_tracked_cells(tracked_img, images, frame_id):
     """
 
     cells = {}
-
+    seg_channels = {}
+    # Segment auxillary channels
+    for chan in images:
+        chan_seg_mask = pr.seg_aux_chan(images[chan], frame_id, chan)
+        seg_channels[chan] = cv2.bitwise_and(chan_seg_mask, images[chan])
     # Find cells in tracked image
     labels = np.unique(tracked_img)
 
@@ -320,7 +324,7 @@ def get_tracked_cells(tracked_img, images, frame_id):
         channels_pixels = {}
         # Find pixel values for each channel
         for channel in images:
-            channels_pixels[channel] = (images[channel])[tracked_img == label]
+            channels_pixels[channel] = seg_channels[channel][tracked_img == label]
         first_elemnt = np.argwhere(tracked_img == label)[0]
         centroid = (first_elemnt[1], first_elemnt[0])  # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
@@ -568,34 +572,30 @@ def analyze_channels(channels):
         a string representation of the analyzed channeled, e.g 'GFP'
     """
     for channel in channels:
-        frame_thresh = {}  # dict<int, thresh> that holds frames and their threshoulds
-
         # iterate over first frame identified cells
         for cell in cells_frames:
             if cell != 0:  # skip background label
                 # iterate over next frames
                 for frame_id in range(1, max(seq_frames) + 1):
                     if frame_id in cells_frames[cell]:
-                        if frame_id not in frame_thresh:
-                            frame_thresh[frame_id] = pr.find_thresh_aux(seq_frames[frame_id].images[channel])
                         label = seq_frames[frame_id].cells[cell].global_label
                         # if cell is color has changed - update db
-                        if check_changed(frame_id=frame_id, label=label, thresh_intensity=frame_thresh[frame_id], channel=channel):
+                        if check_changed(frame_id=frame_id, label=label, channel=channel):
                             if cell not in cells_trans:
                                 cells_trans[cell] = {}
                             cells_trans[cell][channel] = frame_id
                             break
 
 
-def check_changed(frame_id, label, channel, thresh_intensity, thresh_change=0.1):  # TODO change threshold
-    frame =  seq_frames[frame_id]
+def check_changed(frame_id, label, channel, thresh_change=0.05):  # TODO change threshold
+    # TODO Special treatment for PI (lower threshold)
+    frame = seq_frames[frame_id]
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = frame.cells[label]
     pixels = cell.pixel_values[channel]
-
     # cell_mean = np.mean(cell.pixel_values[channel])
     cell_area = pixels.size
-    cell_colored = np.sum(pixels[pixels > thresh_intensity]) / 255
+    cell_colored = np.sum(pixels) / 255
     # cell_colored = pixels.size
     cell_intensity = cell_colored / cell_area
     # cell_intensity = cell_colored
@@ -647,7 +647,7 @@ def debug_channels(dir, channels):
                 tmp, concomps = cv2.threshold(np.uint8(frame.con_comps), 0, 255, cv2.THRESH_BINARY)
                 if chan == 'phase':
                     b = cv2.normalize(concomps, None, 0, 255, cv2.NORM_MINMAX)
-                    g = cv2.normalize(images["fitc"], None, 0, 100, cv2.NORM_MINMAX)
+                    g = cv2.normalize(images["fitc"], None, 0, 255, cv2.NORM_MINMAX)
                     r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
                     vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
                     vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
@@ -659,17 +659,17 @@ def debug_channels(dir, channels):
         frame = seq_frames[frame_id]
         images = frame.images
         tmp, concomps = cv2.threshold(np.uint8(frame.con_comps), 0, 255, cv2.THRESH_BINARY)
-        for cell in seq_frames[frame_id].cells:
+        for cell in frame.cells:
             for channel in channels:
                 if cell in cells_trans and channel in cells_trans[cell]:
                     if cells_trans[cell][channel] <= frame_id:
-                        cv2.putText(concomps, str(channel[0]), seq_frames[frame_id].cells[cell].centroid,
+                        cv2.putText(concomps, str(channel[0]), frame.cells[cell].centroid,
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2) # FIXME put text on copy instead of original
-                        cv2.putText(images[channel], str(channel[0]), seq_frames[frame_id].cells[cell].centroid,
+                        cv2.putText(images[channel], str(channel[0]), frame.cells[cell].centroid,
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2)
 
         b = concomps
-        g = cv2.normalize(images["fitc"], None, 0, 130, cv2.NORM_MINMAX)
+        g = cv2.normalize(images["fitc"], None, 0, 255, cv2.NORM_MINMAX)
         r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
         vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
         vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
@@ -687,7 +687,7 @@ def load_external(comps_dirk, ker_params, opt_params, format):
 
     """
     for interval in seq_paths:
-        frame = load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug=False, external=False)
+        frame = load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug=False, external=True)
         seq_frames[frame.id] = frame
 
 
@@ -703,10 +703,10 @@ if __name__ == "__main__":
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
     iterations = 15
-    procs = 2
+    procs = 4
     debug = False
     file_format = mpar.TitleFormat.DATE
-    cached = False
+    cached = True
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
