@@ -586,7 +586,7 @@ def analyze_channels(channels):
                             break
 
 
-def check_changed(frame_id, label, channel, thresh_intensity, thresh_change=0.12):  # TODO change threshold
+def check_changed(frame_id, label, channel, thresh_intensity, thresh_change=0.1):  # TODO change threshold
     frame =  seq_frames[frame_id]
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
     cell = frame.cells[label]
@@ -623,6 +623,7 @@ def debug_channels(dir, channels):
 
     for channel in channels:
         for frame_id in range(1, max(seq_frames) + 1):
+            # Visualize colored connected components with cell numbers
             frame_chan = seq_frames[frame_id].images[channel]
             dbg_frame = np.zeros_like(frame_chan)
             for cell in seq_frames[frame_id].cells:
@@ -637,11 +638,11 @@ def debug_channels(dir, channels):
             io_utils.save_img(dbg_frame, path, uint8=True)
             io_utils.save_img(seq_frames[frame_id].images[channel], thresh_path, uint8=True)
 
-            # Visualize stack
+            # Visualize stack (con comps + fitc + pi)
+            frame = seq_frames[frame_id]
+            images = frame.images
+            masks = frame.masks
             for chan in seg_channel_types:
-                frame = seq_frames[frame_id]
-                images = frame.images
-                masks = frame.masks
                 tmp, concomps = cv2.threshold(np.uint8(frame.con_comps), 0, 255, cv2.THRESH_BINARY)
                 if chan in masks:
                     b = cv2.normalize(concomps, None, 0, 255, cv2.NORM_MINMAX)
@@ -651,6 +652,27 @@ def debug_channels(dir, channels):
                     vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
                     cv2.imwrite(comps_dir + '\\' + 'vis\\' + str(frame_id) + ".tif", vis)
 
+    # Vis colored connected components with cell numbers
+    for frame_id in range(1, max(seq_frames) + 1):
+
+        frame = seq_frames[frame_id]
+        images = frame.images
+        tmp, concomps = cv2.threshold(np.uint8(frame.con_comps), 0, 255, cv2.THRESH_BINARY)
+        for cell in seq_frames[frame_id].cells:
+            for channel in channels:
+                if cell in cells_trans and channel in cells_trans[cell]:
+                    if cells_trans[cell][channel] <= frame_id:
+                        cv2.putText(concomps, str(channel[0]), seq_frames[frame_id].cells[cell].centroid,
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2) # FIXME put text on copy instead of original
+                        cv2.putText(images[channel], str(channel[0]), seq_frames[frame_id].cells[cell].centroid,
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2)
+
+        b = concomps
+        g = cv2.normalize(images["fitc"], None, 0, 130, cv2.NORM_MINMAX)
+        r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
+        vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
+        vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
+        cv2.imwrite(comps_dir + '\\' + 'eval\\' + str(frame_id) + ".tif", vis)
 
 def load_external(comps_dirk, ker_params, opt_params, format):
     """
@@ -664,7 +686,7 @@ def load_external(comps_dirk, ker_params, opt_params, format):
 
     """
     for interval in seq_paths:
-        frame = load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug=False, external=True)
+        frame = load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug=False, external=False)
         seq_frames[frame.id] = frame
 
 
@@ -683,7 +705,7 @@ if __name__ == "__main__":
     procs = 2
     debug = False
     file_format = mpar.TitleFormat.DATE
-    cached = True
+    cached = False
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
