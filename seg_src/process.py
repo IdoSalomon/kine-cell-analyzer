@@ -32,6 +32,13 @@ cpdef unsigned char[:, :] threshold_fast(int T, unsigned char[:, :] image):
     return image
 """
 
+def find_thresh_aux(img):
+    thresh_color = np.percentile(img, 99.9)
+    thresh_tri, triangle = cv2.threshold(np.uint8(img), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_TRIANGLE)
+    if not img_utils.is_noisy(triangle):
+        thresh_color = thresh_tri
+    return thresh_color
+
 def get_gradient(img):
     # Calculate the x and y gradients using Sobel operator
     grad_x = np.float32(cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5))

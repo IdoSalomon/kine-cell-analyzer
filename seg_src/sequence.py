@@ -562,34 +562,34 @@ def analyze_channels(channels):
         a string representation of the analyzed channeled, e.g 'GFP'
     """
     for channel in channels:
-        frame_bg = {}  # dictionary <img, float, float> that holds the current frame channel + mean background
+        frame_thresh = {}  # dict<int, thresh> that holds frames and their threshoulds
 
         # iterate over first frame identified cells
         for cell in cells_frames:
             if cell != 0:  # skip background label
                 # iterate over next frames
-                for frame_id in range(2, max(seq_frames)):
+                for frame_id in range(1, max(seq_frames) + 1):
                     if frame_id in cells_frames[cell]:
+                        if frame_id not in frame_thresh:
+                            frame_thresh[frame_id] = pr.find_thresh_aux(seq_frames[frame_id].images[channel])
                         label = seq_frames[frame_id].cells[cell].global_label
                         # if cell is color has changed - update db
-                        if check_changed(frame_id=frame_id, label=label, channel=channel):
+                        if check_changed(frame_id=frame_id, label=label, thresh_intensity=frame_thresh[frame_id], channel=channel):
                             if cell not in cells_trans:
                                 cells_trans[cell] = {}
                             cells_trans[cell][channel] = frame_id
                             break
 
 
-def check_changed(frame_id, label, channel, thresh_change=0.03):  # TODO change threshold
-
+def check_changed(frame_id, label, channel, thresh_intensity, thresh_change=0.12):  # TODO change threshold
+    frame =  seq_frames[frame_id]
     # calculate cell average intensity, if it is substantially larger than background -> decide cell is colored
-    cell = seq_frames[frame_id].cells[label]
-
+    cell = frame.cells[label]
     pixels = cell.pixel_values[channel]
-    thresh_color = np.percentile(seq_frames[frame_id].images[channel], 99.9)
-    # TODO 1) OPENCV Triangle thresh. 2) Find connected components on triangle thresh. 3) if too many/too big compared to previous frame, use 0.99 percentile.
+
     # cell_mean = np.mean(cell.pixel_values[channel])
     cell_area = pixels.size
-    cell_colored = np.sum(pixels[pixels > thresh_color]) / 255
+    cell_colored = np.sum(pixels[pixels > thresh_intensity]) / 255
     # cell_colored = pixels.size
     cell_intensity = cell_colored / cell_area
     # cell_intensity = cell_colored
@@ -637,9 +637,9 @@ def debug_channels(dir, channels):
                 frame = seq_frames[frame_id]
                 images = frame.images
                 masks = frame.masks
-                tracked = frame.tracked_img
+                tmp, concomps = cv2.threshold(np.uint8(frame.con_comps), 0, 255, cv2.THRESH_BINARY)
                 if chan in masks:
-                    b = cv2.normalize(tracked, None, 0, 255, cv2.NORM_MINMAX)
+                    b = cv2.normalize(concomps, None, 0, 255, cv2.NORM_MINMAX)
                     g = cv2.normalize(images["fitc"], None, 0, 100, cv2.NORM_MINMAX)
                     r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
                     vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
