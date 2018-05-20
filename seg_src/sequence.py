@@ -120,7 +120,7 @@ def get_cells_con_comps(con_comps, debug=False):
     return cells
 
 
-def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug=False):
+def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug=False, external=False):
     """
     Loads frame.
 
@@ -149,15 +149,20 @@ def load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, d
     # Load channels
     images = create_stack(seq_paths[interval], opt_params=opt_params)
     # Segment
-    masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug=debug)
-    # Generate and save connected components
-    con_comp = 0
-    for channel in seg_channel_types:
-        if channel in masks:
-            con_comp = pr.get_connected_components(masks[channel], grayscale=True, debug=debug)
-
+    masks = {}
+    con_comp = {}
+    if not external:
+        masks = create_masks(images, ker_params=ker_params, opt_params=opt_params, interval=interval, debug=debug)
+        # Generate and save connected components
+        for channel in seg_channel_types:
+            if channel in masks:
+                con_comp = pr.get_connected_components(masks[channel], grayscale=True, debug=debug)
+                con_comp = con_comp[1]
+    else:
+        path = comps_dir + '\\' + interval + '.tif'
+        con_comp = img_utils.load_img(path, 1, False, False, float=False, normalize=False)
     frame = fr.Frame(id=io_utils.extract_num(interval, format=format), title=interval, images=images, masks=masks,
-                     con_comps=con_comp[1])
+                     con_comps=con_comp)
     print("Loaded frame {}\n".format(interval))
 
     return frame
@@ -647,6 +652,22 @@ def debug_channels(dir, channels):
                     cv2.imwrite(comps_dir + '\\' + 'vis\\' + str(frame_id) + ".tif", vis)
 
 
+def load_external(comps_dirk, ker_params, opt_params, format):
+    """
+    Loads sequence channels, connected components into seq_frames
+    Parameters
+    ----------
+    dir : str
+         external image sequence directory
+    comps_dir : str
+        external connected components directory
+
+    """
+    for interval in seq_paths:
+        frame = load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug=False, external=True)
+        seq_frames[frame.id] = frame
+
+
 if __name__ == "__main__":
     """img_to_align = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
     img_ref = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
@@ -655,43 +676,49 @@ if __name__ == "__main__":
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=1, zetap=0.8, dict_size=20)
     opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=0.5,
                            max_itr=100, opt_tolr=np.finfo(float).eps)
+    # params
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
-
-    """dir = "images\\seq_nec"
-    comps_dir = "images\\seq_nec\\concomps"""
-
-    # load_tracked_masks("images\\seq_nec\\tracked")
-    print("Started sequence loading\n")
-
     iterations = 15
-    procs = 4
+    procs = 2
     debug = False
     file_format = mpar.TitleFormat.DATE
-
+    cached = True
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
-    load_sequence(dir, ker_params=ker_params, opt_params=opt_params, comps_dir=comps_dir, debug=debug, itr=iterations,
-                  format=mpar.TitleFormat.TRACK, procs=procs)
+    if not cached:
+        """dir = "images\\seq_nec"
+        comps_dir = "images\\seq_nec\\concomps"""
 
-    print("Finished sequence Loading\n")
+        # load_tracked_masks("images\\seq_nec\\tracked")
+        print("Started sequence loading\n")
 
-    print("Started sequence stabilization\n")
+        load_sequence(dir, ker_params=ker_params, opt_params=opt_params, comps_dir=comps_dir, debug=debug,
+                      itr=iterations,
+                      format=mpar.TitleFormat.TRACK, procs=procs)
 
-    stabilize_sequence(debug, procs)
+        print("Finished sequence Loading\n")
 
-    print("Finished sequence stabilization\n")
+        print("Started sequence stabilization\n")
 
-    print("Saving connected components...\n")
+        stabilize_sequence(debug, procs)
 
-    save_sequence_con_comps(comps_dir)
-    # exit()
+        print("Finished sequence stabilization\n")
 
-    print("Started sequence tracking\n")
+        print("Saving connected components...\n")
 
-    track_sequence()
+        save_sequence_con_comps(comps_dir)
+        # exit()
 
-    print("Finished sequence tracking\n")
+        print("Started sequence tracking\n")
+
+        track_sequence()
+
+        print("Finished sequence tracking\n")
+    else:
+        print("Started loading external sequence\n")
+        load_external(comps_dir, ker_params, opt_params, format=mpar.TitleFormat.TRACK)
+        print("Finished loading external sequence\n")
 
     print("Started loading tracked sequence\n")
 
