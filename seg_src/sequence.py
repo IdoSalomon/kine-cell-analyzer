@@ -2,18 +2,20 @@ import multiprocessing as mp
 import os
 import random
 import subprocess
+import sys
 from multiprocessing import Pool
 from typing import Tuple
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+
 import cell
 import cell as cl
+import debug_utils as dbg
 import frame as fr
 import img_utils
 import io_utils
-import debug_utils as dbg
 import misc_params as mpar
 import process as pr
 import sequence_ext as ext
@@ -706,10 +708,10 @@ if __name__ == "__main__":
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
     iterations = 15
-    procs = 4
+    procs = 2
     debug = False
     file_format = mpar.TitleFormat.DATE
-    cached = True
+    cached = False
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
@@ -755,6 +757,13 @@ if __name__ == "__main__":
 
     analyze_channels(["fitc", "PI"])
 
+    prev = sys.stdout
+    sys.stdout = open('trans.txt', 'w')
+    print(cells_trans)
+    sys.stdout = open('cell_frames.txt', 'w')
+    print(cells_frames)
+    sys.stdout = prev
+
     print("Finished analyze_channels\n")
 
     debug_channels("dbg\\L136\\A2\\4", ["fitc", "PI"])
@@ -762,6 +771,7 @@ if __name__ == "__main__":
     print("Finished debug_channels\n")
 
     dbg.plot_kinematics(cell_frames=cells_frames, cell_trans=cells_trans, frames_No=14, red_chan='PI', green_chan='fitc', all_frames=False)
+    dbg.plot_quantative(cells_trans, len(seq_frames))
 
     print("Finished plotting kinematics\n")
 

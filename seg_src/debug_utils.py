@@ -2,6 +2,7 @@ import math
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 DBG_DIR = 'dbg'
 
@@ -95,3 +96,26 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_cha
     plt.legend((p0[0], p2[0], p3[0]), ('Uncolored', 'fitc', 'PI'))
 
     plt.show()
+
+
+def plot_quantative(cell_trans, frames_No, red_chan='PI', green_chan='fitc'):
+    frame_no = 14
+    red_chan = 'PI'
+    green_chan = 'fitc'
+
+    red_per_frame = [0] * frame_no
+    green_per_frame = [0] * frame_no
+
+    for cell in cell_trans:
+        if green_chan in cell_trans[cell]:
+            green_per_frame[cell_trans[cell][green_chan] - 1] += 1
+        if red_chan in cell_trans[cell]:
+            red_per_frame[cell_trans[cell][red_chan] - 1] += 1
+
+    green_per_frame = np.cumsum(green_per_frame)
+    red_per_frame = np.cumsum(red_per_frame)
+
+    ind = np.arange(frame_no)
+
+    plt.plot(ind, red_per_frame, color='red')
+    plt.plot(ind, green_per_frame, color='green')
