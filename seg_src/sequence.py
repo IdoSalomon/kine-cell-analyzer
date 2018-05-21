@@ -487,12 +487,17 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25, external=False):
 
         # shift aux channels
         for channel in seq_frames[frame].images:
-            if channel in aux_channel_types:
+            """if channel in aux_channel_types:
                 shifted = translate_img(seq_frames[frame].images[channel], shifts[frame][0], shifts[frame][1])
                 seq_frames[frame].images[channel] = crop_img(shifted, crop_right, crop_left, crop_top, crop_bottom)
                 if debug:
                     plt.imshow(seq_frames[frame].images[channel])
-                    plt.show()
+                    plt.show()"""
+            shifted = translate_img(seq_frames[frame].images[channel], shifts[frame][0], shifts[frame][1])
+            seq_frames[frame].images[channel] = crop_img(shifted, crop_right, crop_left, crop_top, crop_bottom)
+            if debug:
+                plt.imshow(seq_frames[frame].images[channel])
+                plt.show()
 
 
 def calc_shift(prev: np.ndarray, cur: np.ndarray, max_shift: int = 1, procs=2) -> Tuple[int, int]:
@@ -742,6 +747,7 @@ if __name__ == "__main__":
 
         track_sequence()
 
+
         print("Finished sequence tracking\n")
     else:
         print("Started loading external sequence\n")
@@ -752,6 +758,8 @@ if __name__ == "__main__":
     print("Started loading tracked sequence\n")
 
     load_tracked_sequence(dir_tracked="images\\L136\\A2\\4\\concomps\\track", format=mpar.TitleFormat.TRACK)
+
+    dbg.setup_ground_truth(seq_frames[1])
 
     print("Finished loading tracked sequence\n")
 
