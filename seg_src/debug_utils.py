@@ -55,6 +55,9 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_cha
                            else 1 + frames_No - cell_trans[i][green_chan]
                            for i in cell_label]
 
+    green_red_same_frame = [0 if i not in cell_trans or green_chan not in cell_trans[i] or red_chan not in cell_trans[i]
+                                 or (cell_trans[i][green_chan] != cell_trans[i][red_chan]) else 1 for i in cell_label]
+
     red_bottom = [0 if i not in cell_trans or red_chan not in cell_trans[i] else cell_trans[i][red_chan] - 1 for i in
                   cell_label]
     green_bottom = [0 if i not in cell_trans or green_chan not in cell_trans[i] else cell_trans[i][green_chan] - 1 for i
@@ -83,6 +86,8 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_cha
     # red before green WA
     p4 = plt.bar(ind, green_if_red_before, width, bottom=green_bottom, color='green')
 
+    p5 = plt.bar(ind, green_red_same_frame, width, bottom=green_bottom, color='yellow')
+
     # plot tracking "holes", i.e. paint bar in white, in frames where we lost track of cell
     for i in range(frames_No):
         missing_filter = [0 if (i + 1) in cell_frames[cell] else 1 for cell in cell_label]
@@ -93,7 +98,7 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_cha
     plt.title('Cell Kinematics Visualisation')
     plt.xticks(ind, [str(cell_label[i]) for i in range(len(uncolored))])
     plt.yticks(np.arange(0, frames_No, 1), np.arange(1, frames_No + 1, 1))
-    plt.legend((p0[0], p2[0], p3[0]), ('Uncolored', 'fitc', 'PI'))
+    plt.legend((p0[0], p2[0], p3[0], p5[0]), ('Uncolored', 'fitc', 'PI', 'fitc and PI - same frame'))
 
     plt.show()
 
@@ -105,17 +110,22 @@ def plot_quantative(cell_trans, frames_No, red_chan='PI', green_chan='fitc'):
 
     red_per_frame = [0] * frame_no
     green_per_frame = [0] * frame_no
+    both = [0] * frame_no
 
     for cell in cell_trans:
         if green_chan in cell_trans[cell]:
             green_per_frame[cell_trans[cell][green_chan] - 1] += 1
         if red_chan in cell_trans[cell]:
             red_per_frame[cell_trans[cell][red_chan] - 1] += 1
+        if red_chan in cell_trans[cell] and green_chan in cell_trans[cell]:
+            both[cell_trans[cell][red_chan] - 1] += 1
 
     green_per_frame = np.cumsum(green_per_frame)
     red_per_frame = np.cumsum(red_per_frame)
+    both = np.cumsum(both)
 
     ind = np.arange(frame_no)
 
     plt.plot(ind, red_per_frame, color='red')
     plt.plot(ind, green_per_frame, color='green')
+    plt.plot(ind, both, color='yellow')
