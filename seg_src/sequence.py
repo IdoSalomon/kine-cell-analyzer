@@ -702,8 +702,8 @@ def load_external(comps_dirk, ker_params, opt_params, format):
 
 
 if __name__ == "__main__":
-    """img_to_align = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
-    img_ref = img_utils.load_img("images\\L136\\A2\\4\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
+    """img_to_align = img_utils.load_img("images\\L136\\A2\\3\\L136_phase_A2_4_2018y02m12d_10h30m.tif", 0.5, True, False)
+    img_ref = img_utils.load_img("images\\L136\\A2\\3\\L136_phase_A2_4_2018y02m12d_10h45m.tif", 0.5, True, False)
     pr.align_img(img_to_align,img_ref)"""
 
     ker_params = KerParams(ring_rad=4, ring_wid=0.8, ker_rad=1, zetap=0.8, dict_size=20)
@@ -713,10 +713,10 @@ if __name__ == "__main__":
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
     iterations = 15
-    procs = 2
+    procs = 4
     debug = False
     file_format = mpar.TitleFormat.DATE
-    cached = False
+    cached = True
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
@@ -765,16 +765,21 @@ if __name__ == "__main__":
 
     analyze_channels(["fitc", "PI"])
 
+    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"])
+
     prev = sys.stdout
     sys.stdout = open('trans.txt', 'w')
     print(cells_trans)
     sys.stdout = open('cell_frames.txt', 'w')
     print(cells_frames)
+    sys.stdout = open('frames_cyt.txt', 'w')
+    print(frames_cyt)
     sys.stdout = prev
 
     print("Finished analyze_channels\n")
 
     debug_channels("dbg\\L136\\A2\\4", ["fitc", "PI"])
+
 
     print("Finished debug_channels\n")
 

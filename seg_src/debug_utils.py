@@ -1,6 +1,7 @@
 import math
 import os
-
+import random
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -129,3 +130,35 @@ def plot_quantative(cell_trans, frames_No, red_chan='PI', green_chan='fitc'):
     plt.plot(ind, red_per_frame, color='red')
     plt.plot(ind, green_per_frame, color='green')
     plt.plot(ind, both, color='yellow')
+
+
+def create_flow_cyt_data(seq_frames, channels):
+    frames_cyt = {}
+
+    for frame_id in seq_frames:
+        cells_cyt = {}
+        frame = seq_frames[frame_id]
+        cells = frame.cells
+        for cell_id in cells:
+            if cell_id == 0:  # Skip background
+                continue
+            # Calculate intensities for all requested channels
+            cell_intensities = []
+            for channel in channels:
+                intensity = np.mean(cells[cell_id].pixel_values[channel])
+                cell_intensities.append(intensity)
+            cells_cyt[cells[cell_id].global_label] = cell_intensities
+
+        frames_cyt[frame_id] = cells_cyt
+
+    return frames_cyt
+
+def setup_ground_truth(frame):
+    phase = np.copy(frame.images["phase"])
+    rand_cells = [random.randint(1, 720) for i in range(100)]
+    for cell in rand_cells:
+        cv2.circle(phase, frame.cells[cell].centroid, radius=10, color=0)
+        cv2.putText(phase, str(cell), frame.cells[cell].centroid,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.53, 255, 1)
+    phase = cv2.normalize(phase, None, 0, 255, cv2.NORM_MINMAX)
+    cv2.imwrite("images\\L136\\A2\\4\\ground\\ground.tif", np.uint8(phase))
