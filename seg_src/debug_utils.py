@@ -4,6 +4,8 @@ import random
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 
 DBG_DIR = 'dbg'
 
@@ -133,10 +135,8 @@ def plot_quantative(cell_trans, frames_No, red_chan='PI', green_chan='fitc'):
 
 
 def create_flow_cyt_data(seq_frames, channels):
-    frames_cyt = {}
-
+    rows = []
     for frame_id in seq_frames:
-        cells_cyt = {}
         frame = seq_frames[frame_id]
         cells = frame.cells
         for cell_id in cells:
@@ -147,11 +147,16 @@ def create_flow_cyt_data(seq_frames, channels):
             for channel in channels:
                 intensity = np.mean(cells[cell_id].pixel_values[channel])
                 cell_intensities.append(intensity)
-            cells_cyt[cells[cell_id].global_label] = cell_intensities
 
-        frames_cyt[frame_id] = cells_cyt
+            rows.append({'Frame': frame_id, 'Cell': cell_id, 'X': cell_intensities[0], 'Y': cell_intensities[1]})
+    df = pd.DataFrame(rows)
+    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 2], kind="kde")
+    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 2], kind="reg")
+    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 2], kind="hex")
 
-    return frames_cyt
+    plt.show()
+
+    return df
 
 def setup_ground_truth(frame):
     phase = np.copy(frame.images["phase"])
