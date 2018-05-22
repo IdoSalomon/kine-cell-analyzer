@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture
 
 DBG_DIR = 'dbg'
 
@@ -134,11 +136,23 @@ def plot_quantative(cell_trans, frames_No, red_chan='PI', green_chan='fitc'):
     plt.plot(ind, both, color='yellow')
 
 
-def create_flow_cyt_data(seq_frames, channels):
+def create_flow_cyt_data(seq_frames, channels, cells_trans):
     rows = []
     for frame_id in seq_frames:
         frame = seq_frames[frame_id]
         cells = frame.cells
+        """static_sample = random.sample(list(set(seq_frames[frame_id].cells.keys()) - set(cells_trans.keys())), len([val for val in seq_frames[frame_id].cells.keys() if val in cells_trans]))
+        for cell_id in cells:
+            if cell_id == 0:  # Skip background
+                continue
+            if cell_id in cells_trans or cell_id in static_sample:
+                # Calculate intensities for all requested channels
+                cell_intensities = []
+                for channel in channels:
+                    intensity = np.mean(cells[cell_id].pixel_values[channel])
+                    cell_intensities.append(intensity)
+
+                rows.append({'Frame': frame_id, 'Cell': cell_id, 'X': cell_intensities[0], 'Y': cell_intensities[1]})"""
         for cell_id in cells:
             if cell_id == 0:  # Skip background
                 continue
@@ -150,9 +164,26 @@ def create_flow_cyt_data(seq_frames, channels):
 
             rows.append({'Frame': frame_id, 'Cell': cell_id, 'X': cell_intensities[0], 'Y': cell_intensities[1]})
     df = pd.DataFrame(rows)
-    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 2], kind="kde")
-    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 2], kind="reg")
-    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 2], kind="hex")
+    """sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 9], kind="kde")
+    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 9], kind="reg")
+
+
+    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 13], kind="kde")
+    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 13], kind="reg")
+
+    sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 14], kind="kde")"""
+
+    df_14 = df[df['Frame'] == 14]
+    kmeans = KMeans(n_clusters=3, random_state=0).fit(df_14.reindex(columns=['X', 'Y']))
+    #kmeans = (GaussianMixture(n_components=4, covariance_type="full", tol=0.001).fit(df_14.reindex(columns=['X', 'Y']))).predict(df_14.reindex(columns=['X', 'Y']))
+    # print(kmeans.labels_)
+    # print(kmeans.cluster_centers_)
+
+    x = df_14['Y']
+    y = df_14['X']
+    plt.scatter(x, y, c=kmeans.labels_)
+
+    #plt.scatter(df.Y[df['Frame'] == 14], df.X[df['Frame'] == 14], s=0.2, alpha=1)
 
     plt.show()
 

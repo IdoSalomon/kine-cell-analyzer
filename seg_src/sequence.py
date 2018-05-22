@@ -765,7 +765,7 @@ if __name__ == "__main__":
 
     analyze_channels(["fitc", "PI"])
 
-    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"])
+    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans)
 
     prev = sys.stdout
     sys.stdout = open('trans.txt', 'w')
