@@ -9,6 +9,7 @@ from typing import Tuple
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import psutil
 
 import cell
 import cell as cl
@@ -20,8 +21,6 @@ import misc_params as mpar
 import process as pr
 import sequence_ext as ext
 from prec_params import KerParams, OptParams
-
-seq_paths = {}  # Paths to all sequence images
 
 seq_paths = {}  # Paths to all sequence images
 
@@ -39,6 +38,8 @@ aux_channel_types = ["GFP", "TxRed", "fitc", "FITC", "PI", "pi"]
 cells_frames = {}  # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
 
 cells_trans = {}  # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
+
+cells_aux_mask_size = {chan: {} for chan in aux_channel_types}
 
 diff = {}
 
@@ -313,11 +314,12 @@ def get_tracked_cells(tracked_img, images, frame_id):
     """
 
     cells = {}
+    aux_masks = {}
     seg_channels = {}
     # Segment auxillary channels
     for chan in images:
-        chan_seg_mask = pr.seg_aux_chan(images[chan], frame_id, chan)
-        seg_channels[chan] = cv2.bitwise_and(chan_seg_mask, images[chan])
+        aux_masks[chan] = pr.seg_aux_chan(images[chan], frame_id, chan)
+        seg_channels[chan] = cv2.bitwise_and(aux_masks[chan], images[chan])
     # Find cells in tracked image
     labels = np.unique(tracked_img)
 
@@ -327,6 +329,15 @@ def get_tracked_cells(tracked_img, images, frame_id):
         # Find pixel values for each channel
         for channel in images:
             channels_pixels[channel] = seg_channels[channel][tracked_img == label]
+
+            # get label's aux mask pixels
+            label_aux_px = aux_masks[channel][tracked_img == label]
+
+            # choose only pixels that are part of the mask
+            label_aux_px = label_aux_px[label_aux_px == 255]
+
+            # save aux mask size for given cell
+            cells_aux_mask_size[channel][label] = np.size(label_aux_px)
         first_elemnt = np.argwhere(tracked_img == label)[0]
         centroid = (first_elemnt[1], first_elemnt[0])  # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
@@ -457,7 +468,7 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25, external=False):
         prev_phase = np.float32(seq_frames[frame - 1].images[phase_chan])
         rows, cols = phase.shape
 
-        final_shift = calc_shift(prev_phase, phase, max_shift=25, procs=4)
+        final_shift = calc_shift(prev_phase, phase, max_shift=25, procs=procs)
         final_shift = (final_shift[0] + aggr_shift_x, final_shift[1] + aggr_shift_y)
         shifts[frame] = final_shift
         print("aggregated shift = {}".format(final_shift))
@@ -713,7 +724,7 @@ if __name__ == "__main__":
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
     iterations = 15
-    procs = 4
+    procs = psutil.cpu_count(logical=False)  # where available, run in parallel on all physical cpu cores
     debug = False
     file_format = mpar.TitleFormat.DATE
     cached = True
@@ -765,7 +776,7 @@ if __name__ == "__main__":
 
     analyze_channels(["fitc", "PI"])
 
-    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans)
+    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans, cells_aux_mask_size)
 
     prev = sys.stdout
     sys.stdout = open('trans.txt', 'w')
