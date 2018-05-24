@@ -135,7 +135,7 @@ def plot_quantative(cell_trans, frames_No, red_chan='PI', green_chan='fitc'):
     plt.plot(ind, both, color='yellow')
 
 
-def create_flow_cyt_data(seq_frames, channels, cells_aux_mask_size):
+def create_flow_cyt_data(seq_frames, channels, cells_trans):
     rows = []
     for frame_id in seq_frames:
         frame = seq_frames[frame_id]
@@ -157,17 +157,11 @@ def create_flow_cyt_data(seq_frames, channels, cells_aux_mask_size):
                 continue
             # Calculate intensities for all requested channels
             cell_intensities = []
-            cell_msks_size = []
             for channel in channels:
                 intensity = np.mean(cells[cell_id].pixel_values[channel])
                 cell_intensities.append(intensity)
-                cell_msks_size.append(cells_aux_mask_size[channel][cell_id])
-            rows.append({'Frame': frame_id,
-                         'Cell': cell_id,
-                         'X': cell_intensities[0],
-                         'Y': cell_intensities[1],
-                         'X_msk_Size': cell_msks_size[0],
-                         'Y_msk_Size': cell_msks_size[1]})
+
+            rows.append({'Frame': frame_id, 'Cell': cell_id, 'X': cell_intensities[0], 'Y': cell_intensities[1]})
     df = pd.DataFrame(rows)
     """sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 9], kind="kde")
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 9], kind="reg")
@@ -179,7 +173,7 @@ def create_flow_cyt_data(seq_frames, channels, cells_aux_mask_size):
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 14], kind="kde")"""
 
     df_14 = df[df['Frame'] == 14]
-    kmeans = KMeans(n_clusters=3, random_state=0).fit(df_14.reindex(columns=['X', 'Y', 'X_msk_Size', 'Y_msk_Size']))
+    kmeans = KMeans(n_clusters=3, random_state=0).fit(df_14.reindex(columns=['X', 'Y']))
     #kmeans = (GaussianMixture(n_components=4, covariance_type="full", tol=0.001).fit(df_14.reindex(columns=['X', 'Y']))).predict(df_14.reindex(columns=['X', 'Y']))
     # print(kmeans.labels_)
     # print(kmeans.cluster_centers_)
