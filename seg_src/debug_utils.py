@@ -29,21 +29,31 @@ def save_debug_fig(images, fig_name, ncols=2, zoom = 3):
     fig.savefig(DBG_DIR + '/' + fig_name)
 
 
-def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_chan='fitc', all_frames=True):
+def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_chan='fitc', all_frames=True, rand=True,
+                    sample_size=30):
     import numpy as np
     import matplotlib.pyplot as plt
     fig = plt.figure(figsize=(40, 8))  # 400 for full size
 
+    width = 0.6  # the width of the bars: can also be len(x) sequence
+
     if all_frames:
-        context = cell_frames
+        if not rand:
+            context = cell_frames
+        else:
+            context = np.random.choice(list(cell_frames), sample_size)
     else:
         context = cell_trans
 
     # labels
 
-    cell_label = [i for i in sorted(context) if i < 1000]
+    # first key - green change, secondary key - red change, third key - cell number
+    sort_func = lambda cell: (
+        frames_No if cell not in cell_trans or green_chan not in cell_trans[cell] else cell_trans[cell][green_chan],
+        frames_No if cell not in cell_trans or red_chan not in cell_trans[cell] else cell_trans[cell][red_chan],
+        cell)
 
-    first_appeared_filter = [min(cell_frames[i]) - 1 for i in cell_label]
+    cell_label = [i for i in sorted(context, key=sort_func)][:20]
 
     red = [0 if i not in cell_trans or red_chan not in cell_trans[i] else 1 + frames_No - cell_trans[i][red_chan] for i
            in cell_label]
@@ -59,23 +69,25 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_cha
                            else 1 + frames_No - cell_trans[i][green_chan]
                            for i in cell_label]
 
-    green_red_same_frame = [0 if i not in cell_trans or green_chan not in cell_trans[i] or red_chan not in cell_trans[i]
-                                 or (cell_trans[i][green_chan] != cell_trans[i][red_chan]) else 1 for i in cell_label]
-
     red_bottom = [0 if i not in cell_trans or red_chan not in cell_trans[i] else cell_trans[i][red_chan] - 1 for i in
                   cell_label]
     green_bottom = [0 if i not in cell_trans or green_chan not in cell_trans[i] else cell_trans[i][green_chan] - 1 for i
                     in cell_label]
+    green_and_red = [0 if i not in cell_trans or green_chan not in cell_trans[i] or
+                          red_chan not in cell_trans[i]
+                     else 1 + frames_No - cell_trans[i][red_chan] if cell_trans[i][green_chan] <= cell_trans[i][
+        red_chan] else
+    1 + frames_No - cell_trans[i][green_chan]
+                     for i in cell_label]
+    green_and_red_bottom = [red_bottom[i] if green_if_red_before[i] == 0 else green_bottom[i] for i in
+                            range(len(green_bottom))]
 
     uncolored = [frames_No for i in range(len(cell_label))]
-    # TODO Add orange (red + green).
-    # FIXME Why can green appear after red? Red and green should stay until the end of detection(?).
 
     N = len(uncolored)
 
     ind = np.arange(N)  # the x locations for the groups
-    width = 0.35  # the width of the bars: can also be len(x) sequence
-
+    print('ha')
     # plot tracked cells
     p0 = plt.bar(ind, uncolored, width, color='grey')
 
@@ -90,22 +102,27 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_cha
     # red before green WA
     p4 = plt.bar(ind, green_if_red_before, width, bottom=green_bottom, color='green')
 
-    p5 = plt.bar(ind, green_red_same_frame, width, bottom=green_bottom, color='yellow')
+    p5 = plt.bar(ind,
+                 green_and_red,
+                 width,
+                 bottom=green_and_red_bottom,
+                 color='orange')
 
     # plot tracking "holes", i.e. paint bar in white, in frames where we lost track of cell
     for i in range(frames_No):
         missing_filter = [0 if (i + 1) in cell_frames[cell] else 1 for cell in cell_label]
-        # if i == 5:
         plt.bar(ind, missing_filter, width, bottom=np.full(len(cell_label), i), color='white')
 
-    plt.ylabel('Frame No.')
-    plt.title('Cell Kinematics Visualisation')
-    plt.xticks(ind, [str(cell_label[i]) for i in range(len(uncolored))])
-    plt.yticks(np.arange(0, frames_No, 1), np.arange(1, frames_No + 1, 1))
-    plt.legend((p0[0], p2[0], p3[0], p5[0]), ('Uncolored', 'fitc', 'PI', 'fitc and PI - same frame'))
+    plt.ylabel('Frame no. (time)', fontweight='bold', size='x-large')
+    plt.xlabel('Cell ID', fontweight='bold', size='x-large')
+    plt.title('Single-Cell Dynamic Change of Parameters over Time', fontweight='bold', size=22)
+    # plt.xticks(ind, [str(cell_label[i]) for i in range(len(uncolored))])
+    plt.xticks(ind, ind + 1, fontweight='bold', size='x-large')
+    plt.yticks(np.arange(0, frames_No, 1), np.arange(1, frames_No + 1, 1), fontweight='bold', size='x-large')
+    plt.legend((p0[0], p2[0], p3[0], p5[0]), ('Unchanged', 'PI', 'fitc', 'PI+fitc'), loc=4,
+               prop={'size': 'x-large', 'weight': 'bold'})
 
     plt.show()
-
 
 def plot_quantative(cell_trans, frames_No, red_chan='PI', green_chan='fitc'):
     frame_no = 14
