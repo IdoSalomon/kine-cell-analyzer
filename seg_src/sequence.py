@@ -9,6 +9,7 @@ from typing import Tuple
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import psutil
 
 import cell
 import cell as cl
@@ -185,17 +186,19 @@ def aggr_procs_tracked(result):
         frame to aggregate
 
     """
-    frame = result
+    frame = result[0]
+
     # Add frame to collection
     seq_frames[frame.id] = frame
 
     # Assign frame to global label
-    for label in result.cells:
+    for label in frame.cells:
         if label not in cells_frames:
             cells_frames[label] = [frame.id]
         else:
             cells_frames[label].append(frame.id)
 
+    cells_aux_mask_size[frame.id] = result[1]
 
 def aggr_procs(result):
     """
@@ -314,25 +317,27 @@ def get_tracked_cells(tracked_img, images, frame_id):
 
     cells = {}
     seg_channels = {}
+    cells_frame_aux_mask_size = {}
     # Segment auxillary channels
     for chan in images:
         chan_seg_mask = pr.seg_aux_chan(images[chan], frame_id, chan)
         seg_channels[chan] = cv2.bitwise_and(chan_seg_mask, images[chan])
     # Find cells in tracked image
     labels = np.unique(tracked_img)
-
     # Create cell for each label in tracked image
     for label in labels:
         channels_pixels = {}
+        cells_frame_aux_mask_size[label] = {}
         # Find pixel values for each channel
         for channel in images:
+            cells_frame_aux_mask_size[label][channel] = {}
             channels_pixels[channel] = seg_channels[channel][tracked_img == label]
         first_elemnt = np.argwhere(tracked_img == label)[0]
         centroid = (first_elemnt[1], first_elemnt[0])  # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
         cells[label] = cell
 
-    return cells
+    return (cells, cells_frame_aux_mask_size)
 
 
 def load_tracked_mask(tracked_path, opt_params):
@@ -385,14 +390,14 @@ def load_tracked_frame(interval, tracked_paths, opt_params, seq_frames, format=m
         chan_img = frame.images[chan]
         frame.images[chan] = cv2.normalize(chan_img, None, 0, 255, cv2.NORM_MINMAX)
     tracked_img = load_tracked_mask(tracked_paths["trk-" + interval], opt_params)  # image after tracking
-    cells = get_tracked_cells(tracked_img=tracked_img, images=frame.images,
-                              frame_id=frame_id)  # image's cell representation
+    cells, cells_frame_aux_mask_size = get_tracked_cells(tracked_img=tracked_img, images=frame.images,
+                                                         frame_id=frame_id)  # image's cell representation
 
     frame.tracked_img = tracked_img
     frame.cells = cells
 
     print("Loaded tracked frame {}\n".format(interval))
-    return frame
+    return frame, cells_frame_aux_mask_size
 
 
 def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
@@ -407,7 +412,7 @@ def load_tracked_sequence(dir_tracked, format=mpar.TitleFormat.TRACK):
         Image title format.
 
     """
-    pool = mp.Pool(processes=procs)
+    pool = mp.Pool(processes=1)
     # Load all frames
     tracked_paths = io_utils.load_paths(dir_tracked, format=format)
     for interval in tracked_paths:

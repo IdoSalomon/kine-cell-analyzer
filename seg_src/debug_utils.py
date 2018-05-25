@@ -189,6 +189,8 @@ def create_flow_cyt_data(seq_frames, channels, cells_trans):
 
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 14], kind="kde")"""
 
+    df.to_csv('kmeans.csv')
+
     df_14 = df[df['Frame'] == 14]
     kmeans = KMeans(n_clusters=3, random_state=0).fit(df_14.reindex(columns=['X', 'Y']))
     #kmeans = (GaussianMixture(n_components=4, covariance_type="full", tol=0.001).fit(df_14.reindex(columns=['X', 'Y']))).predict(df_14.reindex(columns=['X', 'Y']))
@@ -214,3 +216,7 @@ def setup_ground_truth(frame):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.53, 255, 1)
     phase = cv2.normalize(phase, None, 0, 255, cv2.NORM_MINMAX)
     cv2.imwrite("images\\L136\\A2\\4\\ground\\ground.tif", np.uint8(phase))
+
+
+def evaluate_accuracy():
+    print()
