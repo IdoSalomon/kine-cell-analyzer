@@ -332,7 +332,17 @@ def get_tracked_cells(tracked_img, images, frame_id):
         for channel in images:
             cells_frame_aux_mask_size[label][channel] = {}
             channels_pixels[channel] = seg_channels[channel][tracked_img == label]
-        first_elemnt = np.argwhere(tracked_img == label)[0]
+
+            # get label's aux mask pixels
+            label_aux_px = aux_masks[channel][tracked_img == label]
+
+            # choose only pixels that are part of the mask
+            label_aux_px = label_aux_px[label_aux_px == 255]
+
+            # save aux mask size for given cell
+            cells_frame_aux_mask_size[label][channel] = np.size(label_aux_px)
+        label_ind = np.argwhere(tracked_img == label)
+        first_elemnt = label_ind[0]
         centroid = (first_elemnt[1], first_elemnt[0])  # TODO NOT REALLY CENTROID. USED FOR DEBUG WITH LABELS
         cell = cl.Cell(global_label=label, frame_label=label, pixel_values=channels_pixels, centroid=centroid)
         cells[label] = cell
@@ -764,7 +774,7 @@ if __name__ == "__main__":
 
     load_tracked_sequence(dir_tracked="images\\L136\\A2\\4\\concomps\\track", format=mpar.TitleFormat.TRACK)
 
-    dbg.setup_ground_truth(seq_frames[1])
+    # dbg.setup_ground_truth(seq_frames[1])
 
     print("Finished loading tracked sequence\n")
 
@@ -788,6 +798,7 @@ if __name__ == "__main__":
 
     print("Finished debug_channels\n")
 
+    dbg.evaluate_accuracy(seq_frames, cells_frames, cells_trans, sample_size=20, channels=('fitc', 'PI'))
     dbg.plot_kinematics(cell_frames=cells_frames, cell_trans=cells_trans, frames_No=14, red_chan='PI', green_chan='fitc', all_frames=False)
     dbg.plot_quantative(cells_trans, len(seq_frames))
 

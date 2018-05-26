@@ -1,14 +1,19 @@
 import math
 import os
-import random
 
-import cv2
+import collections
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 
 DBG_DIR = 'dbg'
+
+col_map = {"GFP": "Greens", "FITC": "Greens", "fitc": "Greens", "pi": "Reds", "PI": "Reds", "PHASE": "gray",
+           "phase": "gray", "TxRed": "Reds", "TRANS": "gray",
+           "trans": "gray"}
+
+Box = collections.namedtuple("Box", ["top", "bottom", "left", "right"])
 
 def save_debug_fig(images, fig_name, ncols=2, zoom = 3):
     nrows = math.ceil(len(images) / float(ncols))
@@ -207,16 +212,123 @@ def create_flow_cyt_data(seq_frames, channels, cells_trans):
 
     return df
 
-def setup_ground_truth(frame):
-    phase = np.copy(frame.images["phase"])
-    rand_cells = [random.randint(1, 720) for i in range(100)]
-    for cell in rand_cells:
-        cv2.circle(phase, frame.cells[cell].centroid, radius=10, color=0)
-        cv2.putText(phase, str(cell), frame.cells[cell].centroid,
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.53, 255, 1)
-    phase = cv2.normalize(phase, None, 0, 255, cv2.NORM_MINMAX)
-    cv2.imwrite("images\\L136\\A2\\4\\ground\\ground.tif", np.uint8(phase))
+
+# def setup_ground_truth(frame):
+#     phase = np.copy(frame.images["phase"])
+#     rand_cells = [random.randint(1, 720) for i in range(100)]
+#     for cell in rand_cells:
+#         cv2.circle(phase, frame.cells[cell].centroid, radius=10, color=0)
+#         cv2.putText(phase, str(cell), frame.cells[cell].centroid,
+#                     cv2.FONT_HERSHEY_SIMPLEX, 0.53, 255, 1)
+#     phase = cv2.normalize(phase, None, 0, 255, cv2.NORM_MINMAX)
+#     cv2.imwrite("images\\L136\\A2\\4\\ground\\ground.tif", np.uint8(phase))
 
 
-def evaluate_accuracy():
-    print()
+def calc_bounding_coords(tracked_img, cell):
+    pxls = np.argwhere(tracked_img == cell)
+
+    box = Box(min(pxls, key=lambda x: x[0])[0],
+              max(pxls, key=lambda x: x[0])[0],
+              min(pxls, key=lambda x: x[1])[1],
+              max(pxls, key=lambda x: x[1])[1])
+    return box
+
+
+def expand_box(box, xmax, ymax, pad=2):
+    expanded = Box(max(0, box.top - pad),
+                   min(ymax, box.bottom + pad),
+                   max(0, box.left - pad),
+                   min(xmax, box.right + pad))
+    return expanded
+
+
+# Box = namedtuple("Box", ["top", "bottom", "left", "right"])
+# bounding_box = Box(min(label_ind, key=lambda x: x[0]),
+#                    max(label_ind, key=lambda x: x[0]),
+#                    min(label_ind, key=lambda x: x[1]),
+#                    max(label_ind, key=lambda x: x[1]))
+
+def evaluate_accuracy(seq_frames, cell_frames, cell_trans, sample_size=20, channels=('fitc', 'PI')):
+    # choose a random sample of cells
+    cells = np.random.choice(list(cell_frames), sample_size)
+    trans_labels = list(set(cells).intersection(set(cell_trans)))
+    results = {label: {} for label in cells}
+
+    # for each cell both in labels and cell_trans, validate transition frame
+    for cell in cells:
+        for chan in channels:
+            answer = False
+            while not answer:
+                if cell in cell_trans and chan in cell_trans[cell]:
+                    frame = cell_trans[cell][chan]
+                    tracked_img = seq_frames[frame].tracked_img
+                    box = calc_bounding_coords(tracked_img, cell)
+                    box = expand_box(box, tracked_img.shape[1] - 1, tracked_img.shape[0] - 1)
+                    cell_chan_img = seq_frames[frame].images[chan][box.top: box.bottom + 1, box.left: box.right + 1]
+
+                    cell_mask_img = seq_frames[frame].con_comps[box.top: box.bottom + 1, box.left: box.right + 1]
+
+                    # plot
+                    fig = plt.figure()
+                    fig.add_subplot(1, 2, 1)
+                    plt.title('cell {} - frame {} - mask'.format(cell, frame))
+                    plt.imshow(cell_mask_img, 'gray')
+
+                    fig.add_subplot(1, 2, 2)
+                    plt.title('cell {} - frame {} - channel: {}'.format(cell, frame, chan))
+                    plt.imshow(cell_chan_img, col_map[chan], vmin=0, vmax=255)
+                    plt.show()
+
+                    line = input("[marked] has cell {} changed in {} channel in frame {}?\n".format(cell, chan,
+                                                                                                    cell_trans[cell][
+                                                                                                        chan]))
+                else:
+                    # print mask + channel for each frame
+                    cell_frame_no = len(cell_frames[cell])
+                    fig = plt.figure(figsize=(8, cell_frame_no * 2))
+                    plt.tight_layout()
+                    i = 1
+                    for frame in sorted(cell_frames[cell]):
+                        tracked_img = seq_frames[frame].tracked_img
+                        box = calc_bounding_coords(tracked_img, cell)
+                        box = expand_box(box, tracked_img.shape[1] - 1, tracked_img.shape[0] - 1)
+                        cell_chan_img = seq_frames[frame].images[chan][box.top: box.bottom + 1, box.left: box.right + 1]
+                        cell_mask_img = seq_frames[frame].con_comps[box.top: box.bottom + 1, box.left: box.right + 1]
+
+                        fig.add_subplot(cell_frame_no, 2, i)
+                        plt.title('cell {} - frame {} - mask'.format(cell, frame))
+                        plt.imshow(cell_mask_img, 'gray')
+                        i += 1
+
+                        fig.add_subplot(cell_frame_no, 2, i)
+                        plt.title('cell {} - frame {} - channel: {}'.format(cell, frame, chan))
+                        plt.imshow(cell_chan_img, col_map[chan], vmin=0, vmax=255)  # no normalization
+                        i += 1
+
+                    plt.show()
+                    line = input(
+                        "[unmarked] has cell {} changed in channel {} during the sequence?\n".format(cell, chan))
+                if line == 'y':
+                    results[cell][chan] = True
+                elif line == 'n':
+                    results[cell][chan] = False
+                else:
+                    print("please enter 'y' for yes or 'n' for no")
+                    continue
+                answer = True
+
+    # calcuate accuracy
+    cells_no = len(cells)
+    chan_no = len(channels)
+
+    false_pos = sum([1 if results[cell][chan] and
+                          (cell not in cell_trans or
+                           chan not in cell_trans[cell])
+                     else 0 for cell in cells for chan in channels])
+    false_neg = sum([1 if not results[cell][chan] and
+                          cell in cell_trans and
+                          chan in cell_trans[cell]
+                     else 0 for cell in cells for chan in channels])
+
+    print("false positives: {}, false negatives: {}, accuracy = {}".format(false_pos, false_neg, (
+                cells_no * chan_no - false_neg - false_pos) / float(cells_no * chan_no)))
