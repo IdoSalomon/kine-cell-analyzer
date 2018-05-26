@@ -1,6 +1,8 @@
 import cv2
 import cython as cython
 import numpy as np
+import pandas as pd
+
 import debug_utils as dbg
 import img_utils
 import io_utils
@@ -8,6 +10,7 @@ import prec_sparse as ps
 import img_utils as iu
 from prec_params import KerParams, OptParams
 from scipy import ndimage
+from sklearn.cluster import KMeans
 
 """
 %load_ext cython
@@ -116,7 +119,7 @@ def window_slice(center, kernel):
     return [slice(r-r_pad, r+r_pad+1), slice(c-c_pad, c+c_pad+1)]
 
 
-def find_borders(labels, ker):
+def find_borders_naive(labels, ker):
     label_img = labels[1]
     stats = labels[2]
 
@@ -149,6 +152,51 @@ def find_borders(labels, ker):
                 if num_uniques > 1 and pos:
                     borders[y - pad_h, x - pad_w] = 255
 
+    return borders
+
+def find_borders(labels, ker):
+    label_img = labels
+    rows = []
+
+    # Get original image dimensions
+    h = label_img.shape[0]
+    w = label_img.shape[1]
+
+    # Pad labels image (for sliding window)
+    pad_labels = add_padding(label_img, ker)
+    # Get padding dimensions (for index mapping)
+    pad_h = (int)((pad_labels.shape[0] - h) / 2)
+    pad_w = (int)((pad_labels.shape[1] - w) / 2)
+
+    borders = np.zeros((h,w))
+
+
+
+    # Loop over the image, pixel by pixel
+    for y in range(pad_h, h + pad_h):
+        for x in range(pad_w, w + pad_w):
+            if pad_labels[y, x] == 0:
+                ker_slice = pad_labels[window_slice(center=(y, x), kernel=ker)] # window
+                ker_slice = ker_slice.flatten()
+                dic = {'Coordinate': (y - pad_h, x - pad_w)}
+                for i in range(0, ker_slice.size):
+                    dic[str(i)] = ker_slice[i]
+
+                rows.append(dic)
+
+    df = pd.DataFrame(rows)
+
+    df_no_coords = df.drop(['Coordinate'], axis=1)
+    kmeans = KMeans(n_clusters=3, random_state=0).fit(df_no_coords)
+    #kmeans = (GaussianMixture(n_components=4, covariance_type="full", tol=0.001).fit(df_14.reindex(columns=['X', 'Y']))).predict(df_14.reindex(columns=['X', 'Y']))
+    # print(kmeans.labels_)
+    # print(kmeans.cluster_centers_)
+
+    #borders[kmeans.labels_ == 1] = 255
+    df_coords = df['Coordinate']
+    for j in range(0, df_coords.shape[0]):
+        if kmeans.labels_[j] == 1 or kmeans.labels_[j] == 2:
+            borders[df_coords.get_value(j, 'Coordinate')[0]][df_coords.get_value(j, 'Coordinate')[1]] = 255
     return borders
 
 def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_name="gen_phase_mask", debug=False):
@@ -329,11 +377,38 @@ def calc_borders(restored_img, img, despeckle_size, ker):
     connectivity = 4
     labels = cv2.connectedComponentsWithStats(filtered, connectivity=connectivity)
 
-    borders = find_borders(labels, ker)
+    borders = find_borders(restored, ker)
 
     io_utils.save_img(borders, "dbg\\borders.png")  # TODO Remove
 
     return borders
+
+
+def calc_borders_naive(restored_img, img, despeckle_size, ker):
+    #normailize image to unit8 range: 0-255
+    restored = cv2.normalize(restored_img, None, 0, 255, cv2.NORM_MINMAX)
+
+    restored = np.uint8(restored)
+
+    # step 1 - threshold
+    tmp, threshold = cv2.threshold(restored, 0, 255, cv2.THRESH_BINARY)
+
+    # step 2 - filter far/dead cells
+    filtered = pre_filter_far_cells(threshold, despeckle_size)
+
+    #filtered = cv2.morphologyEx(filtered, cv2.MORPH_CLOSE, (3,3), iterations=1)
+
+    filtered = np.uint8(filtered)
+
+    connectivity = 4
+    labels = cv2.connectedComponentsWithStats(filtered, connectivity=connectivity)
+
+    borders = find_borders_naive(labels, ker)
+
+    io_utils.save_img(borders, "dbg\\borders_naive.png")  # TODO Remove
+
+    return borders
+
 
 
 def fix_segmentation(orig, sub):
@@ -344,13 +419,13 @@ def fix_segmentation(orig, sub):
     orig_labels = cv2.connectedComponentsWithStats(orig, connectivity=orig_connectivity)
     num_cells_orig = orig_labels[0]
     label_img_orig = orig_labels[1]
-    num_cells_sub = cv2.connectedComponentsWithStats(sub, connectivity=connectivity)[0]
     stats = orig_labels[2]
 
     for cell_id in range(1, num_cells_orig):
+        num_cells_sub = cv2.connectedComponentsWithStats(sub, connectivity=connectivity)[0]
         last_img = np.copy(tmp_img)
         tmp_img[label_img_orig == cell_id] = 255
-        if cv2.connectedComponentsWithStats(tmp_img, connectivity=connectivity)[0] != num_cells_sub:
+        if cv2.connectedComponentsWithStats(tmp_img, connectivity=connectivity)[0] < num_cells_sub:
             tmp_img = np.copy(last_img)
     return last_img
 
@@ -370,20 +445,29 @@ def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, f
     additive_zero = cv2.add(additive_zero, next)
 
     # Create initial mask
-    post_proc = gen_phase_mask(additive_zero, img, despeckle_size=despeckle_size, filter_size=dev_thresh, file_name=file_name, debug=debug)
+    post_proc = gen_phase_mask(additive_zero, img, despeckle_size=3, filter_size=3, file_name=file_name, debug=debug)
 
     # Calculate borders
-    borders = calc_borders(additive_zero, img, despeckle_size, ker=(5, 5))
+    borders = calc_borders(additive_zero, img, despeckle_size, ker=(7, 7))
+    borders_naive = calc_borders_naive(additive_zero, img, despeckle_size, ker=(5, 5))
+
+    # Subtract borders from initial mask
+    sub_filter_naive = cv2.subtract(post_proc, np.uint8(borders_naive))
+    sub_filter_naive = pre_filter_far_cells(sub_filter_naive, despeckle_size=9) # 1-9 pixel cells are most likely noise
+    sub_filter_naive = filter_far_cells(sub_filter_naive, dev_thresh=1.8)
+    sub_filter_naive = fix_segmentation(post_proc, sub_filter_naive)
 
     # Subtract borders from initial mask
     sub_filter = cv2.subtract(post_proc, np.uint8(borders))
     sub_filter = pre_filter_far_cells(sub_filter, despeckle_size=9) # 1-9 pixel cells are most likely noise
     sub_filter = filter_far_cells(sub_filter, dev_thresh=1.8)
 
-    # Fix segmentation
-    fixed = fix_segmentation(post_proc, sub_filter)
+    sub_filter_merged = cv2.bitwise_or(np.uint8(sub_filter), sub_filter_naive)
 
-    io_utils.save_img(sub_filter, "dbg\\test_sub_filter.png", uint8=True)  # TODO Remove
+    # Fix segmentation
+    fixed = fix_segmentation(post_proc, sub_filter_merged)
+
+    io_utils.save_img(sub_filter_naive, "dbg\\test_sub_filter.png", uint8=True)  # TODO Remove
     io_utils.save_img(post_proc, "dbg\\test_proc.png", uint8=True)  # TODO Remove
     io_utils.save_img(fixed, "dbg\\test_sub_filter_fixed.png", uint8=True)  # TODO Remove
 

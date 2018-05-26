@@ -717,11 +717,11 @@ if __name__ == "__main__":
     # params
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
-    iterations = 15
-    procs = 4
+    iterations = 1
+    procs = 1
     debug = False
     file_format = mpar.TitleFormat.DATE
-    cached = True
+    cached = False
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
