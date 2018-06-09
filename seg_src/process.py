@@ -185,15 +185,18 @@ def find_borders(labels, ker):
                 rows.append(dic)
 
     df = pd.DataFrame(rows)
+    rows = []  # Free memory
 
     df_no_coords = df.drop(['Coordinate'], axis=1)
     kmeans = KMeans(n_clusters=3, random_state=0).fit(df_no_coords)
+    df_no_coords = []  # Free memory
     #kmeans = (GaussianMixture(n_components=4, covariance_type="full", tol=0.001).fit(df_14.reindex(columns=['X', 'Y']))).predict(df_14.reindex(columns=['X', 'Y']))
     # print(kmeans.labels_)
     # print(kmeans.cluster_centers_)
 
     #borders[kmeans.labels_ == 1] = 255
     df_coords = df['Coordinate']
+    df = []  # Free memory
     for j in range(0, df_coords.shape[0]):
         if kmeans.labels_[j] == 1 or kmeans.labels_[j] == 2:
             borders[df_coords.get_value(j, 'Coordinate')[0]][df_coords.get_value(j, 'Coordinate')[1]] = 255
@@ -219,7 +222,7 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
         dbgImgs += [(threshold, 'step 1 - threshold')]
 
     # step 2 - filter far/dead cells
-    filtered = pre_filter_far_cells(threshold, despeckle_size, debug)
+    filtered = threshold
     if debug:
         dbgImgs += [(filtered, 'step 2 - pre-filter')]
 
@@ -231,7 +234,9 @@ def gen_phase_mask(restored, orig_img, despeckle_size=0, filter_size=0, file_nam
         dbgImgs += [(dilated, 'step 3 - dilate')]
 
     # step 4 - filter far/dead cells
-    filtered = filter_far_cells(dilated, filter_size, debug)
+    #filtered = filter_far_cells(dilated, filter_size, debug)
+    filtered = dilated
+
     if debug:
         dbgImgs += [(filtered, 'step 4 - filter')]
 
@@ -279,6 +284,8 @@ def get_connected_components(img, grayscale=True, debug=True):
     return labels
 
 def filter_far_cells(thresh, dev_thresh=1, debug = True):
+    return ndimage.median_filter(thresh, size=(3, 3)) # TODO test
+
     # Find connected components
     connectivity = 4
     thresh = thresh.astype(np.uint8)
@@ -448,19 +455,22 @@ def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, f
     post_proc = gen_phase_mask(additive_zero, img, despeckle_size=3, filter_size=3, file_name=file_name, debug=debug)
 
     # Calculate borders
-    borders = calc_borders(additive_zero, img, despeckle_size, ker=(7, 7))
-    borders_naive = calc_borders_naive(additive_zero, img, despeckle_size, ker=(5, 5))
+    borders = calc_borders(additive_zero, img, 1, ker=(5, 5))
+    borders_naive = calc_borders_naive(additive_zero, img, 1, ker=(5, 5))
+
+    additive_zero = []  # Free memory
+    next = []  # Free memory
 
     # Subtract borders from initial mask
     sub_filter_naive = cv2.subtract(post_proc, np.uint8(borders_naive))
-    sub_filter_naive = pre_filter_far_cells(sub_filter_naive, despeckle_size=9) # 1-9 pixel cells are most likely noise
-    sub_filter_naive = filter_far_cells(sub_filter_naive, dev_thresh=1.8)
+    #sub_filter_naive = pre_filter_far_cells(sub_filter_naive, despeckle_size=3) # 1-9 pixel cells are most likely noise
+    #sub_filter_naive = filter_far_cells(sub_filter_naive, dev_thresh=1.8)
     sub_filter_naive = fix_segmentation(post_proc, sub_filter_naive)
 
     # Subtract borders from initial mask
     sub_filter = cv2.subtract(post_proc, np.uint8(borders))
     sub_filter = pre_filter_far_cells(sub_filter, despeckle_size=9) # 1-9 pixel cells are most likely noise
-    sub_filter = filter_far_cells(sub_filter, dev_thresh=1.8)
+    sub_filter = filter_far_cells(sub_filter, dev_thresh=1.7)
 
     sub_filter_merged = cv2.bitwise_or(np.uint8(sub_filter), sub_filter_naive)
 
@@ -470,6 +480,7 @@ def seg_phase(img, opt_params=0, ker_params=0, despeckle_size=1, dev_thresh=0, f
     io_utils.save_img(sub_filter_naive, "dbg\\test_sub_filter.png", uint8=True)  # TODO Remove
     io_utils.save_img(post_proc, "dbg\\test_proc.png", uint8=True)  # TODO Remove
     io_utils.save_img(fixed, "dbg\\test_sub_filter_fixed.png", uint8=True)  # TODO Remove
+    io_utils.save_img(sub_filter, "dbg\\test_sub_filter_kmeans.png", uint8=True)  # TODO Remove
 
     return fixed
 

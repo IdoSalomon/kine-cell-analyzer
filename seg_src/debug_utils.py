@@ -177,14 +177,16 @@ def create_flow_cyt_data(seq_frames, channels, cells_trans):
         for cell_id in cells:
             if cell_id == 0:  # Skip background
                 continue
-            # Calculate intensities for all requested channels
-            cell_intensities = []
-            for channel in channels:
-                intensity = np.mean(cells[cell_id].pixel_values[channel])
-                cell_intensities.append(intensity)
+            if cell_id in cells_trans:
+                # Calculate intensities for all requested channels
+                cell_intensities = []
+                for channel in channels:
+                    intensity = np.mean(cells[cell_id].pixel_values[channel])
+                    cell_intensities.append(intensity)
 
-            rows.append({'Frame': frame_id, 'Cell': cell_id, 'X': cell_intensities[0], 'Y': cell_intensities[1]})
+                rows.append({'Frame': frame_id, 'Cell': cell_id, 'X': cell_intensities[0], 'Y': cell_intensities[1]})
     df = pd.DataFrame(rows)
+    df.to_csv('df.csv')
     """sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 9], kind="kde")
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 9], kind="reg")
 
@@ -193,11 +195,8 @@ def create_flow_cyt_data(seq_frames, channels, cells_trans):
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 13], kind="reg")
 
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 14], kind="kde")"""
-
-    df.to_csv('kmeans.csv')
-
-    df_14 = df[df['Frame'] == 14]
-    kmeans = KMeans(n_clusters=3, random_state=0).fit(df_14.reindex(columns=['X', 'Y']))
+    df_14 = df[df['Frame'] == 1]
+    kmeans = KMeans(n_clusters=4, random_state=0).fit(df_14.reindex(columns=['X', 'Y']))
     #kmeans = (GaussianMixture(n_components=4, covariance_type="full", tol=0.001).fit(df_14.reindex(columns=['X', 'Y']))).predict(df_14.reindex(columns=['X', 'Y']))
     # print(kmeans.labels_)
     # print(kmeans.cluster_centers_)

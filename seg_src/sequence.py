@@ -198,7 +198,7 @@ def aggr_procs_tracked(result):
         else:
             cells_frames[label].append(frame.id)
 
-    cells_aux_mask_size[frame.id] = result[1]
+    #cells_aux_mask_size[frame.id] = result[1]
 
 def aggr_procs(result):
     """
@@ -334,7 +334,7 @@ def get_tracked_cells(tracked_img, images, frame_id):
             channels_pixels[channel] = seg_channels[channel][tracked_img == label]
 
             # get label's aux mask pixels
-            label_aux_px = aux_masks[channel][tracked_img == label]
+            label_aux_px = channels_pixels[channel]
 
             # choose only pixels that are part of the mask
             label_aux_px = label_aux_px[label_aux_px == 255]
@@ -727,8 +727,8 @@ if __name__ == "__main__":
     # params
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
-    iterations = 1
-    procs = 1
+    iterations = 15
+    procs = 3
     debug = False
     file_format = mpar.TitleFormat.DATE
     cached = False
@@ -778,15 +778,17 @@ if __name__ == "__main__":
 
     print("Finished loading tracked sequence\n")
 
-    analyze_channels(["fitc", "PI"])
-
-    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans)
-
     prev = sys.stdout
     sys.stdout = open('trans.txt', 'w')
     print(cells_trans)
     sys.stdout = open('cell_frames.txt', 'w')
     print(cells_frames)
+
+    analyze_channels(["fitc", "PI"])
+
+    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans)
+
+
     sys.stdout = open('frames_cyt.txt', 'w')
     print(frames_cyt)
     sys.stdout = prev
