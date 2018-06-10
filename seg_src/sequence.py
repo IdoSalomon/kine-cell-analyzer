@@ -24,8 +24,6 @@ from prec_params import KerParams, OptParams
 
 seq_paths = {}  # Paths to all sequence images
 
-seq_paths = {}  # Paths to all sequence images
-
 seq_frames = {}  # dictionary <int,Frame> that holds all frames in sequence by number
 
 label_colors = {}  # dictionary <int, int> that holds constant colors for each labelled cells
@@ -40,6 +38,8 @@ aux_channel_types = ["GFP", "TxRed", "fitc", "FITC", "PI", "pi"]
 cells_frames = {}  # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
 
 cells_trans = {}  # dictionary <int, dict<str, int>> that holds for each cell ID the transformation frame ID by channel
+
+cells_aux_mask_size = {}
 
 diff = {}
 
@@ -198,7 +198,7 @@ def aggr_procs_tracked(result):
         else:
             cells_frames[label].append(frame.id)
 
-    #cells_aux_mask_size[frame.id] = result[1]
+    cells_aux_mask_size[frame.id] = result[1]
 
 def aggr_procs(result):
     """
@@ -316,12 +316,13 @@ def get_tracked_cells(tracked_img, images, frame_id):
     """
 
     cells = {}
+    aux_masks = {}
     seg_channels = {}
     cells_frame_aux_mask_size = {}
     # Segment auxillary channels
     for chan in images:
-        chan_seg_mask = pr.seg_aux_chan(images[chan], frame_id, chan)
-        seg_channels[chan] = cv2.bitwise_and(chan_seg_mask, images[chan])
+        aux_masks[chan] = pr.seg_aux_chan(images[chan], frame_id, chan)
+        seg_channels[chan] = cv2.bitwise_and(aux_masks[chan], images[chan])
     # Find cells in tracked image
     labels = np.unique(tracked_img)
     # Create cell for each label in tracked image
@@ -334,7 +335,7 @@ def get_tracked_cells(tracked_img, images, frame_id):
             channels_pixels[channel] = seg_channels[channel][tracked_img == label]
 
             # get label's aux mask pixels
-            label_aux_px = channels_pixels[channel]
+            label_aux_px = aux_masks[channel][tracked_img == label]
 
             # choose only pixels that are part of the mask
             label_aux_px = label_aux_px[label_aux_px == 255]
@@ -728,10 +729,10 @@ if __name__ == "__main__":
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
     iterations = 15
-    procs = 3
+    procs = psutil.cpu_count(logical=False)  # where available, run in parallel on all physical cpu cores
     debug = False
     file_format = mpar.TitleFormat.DATE
-    cached = False
+    cached = True
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
@@ -778,17 +779,15 @@ if __name__ == "__main__":
 
     print("Finished loading tracked sequence\n")
 
+    analyze_channels(["fitc", "PI"])
+
+    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans, cells_aux_mask_size)
+
     prev = sys.stdout
     sys.stdout = open('trans.txt', 'w')
     print(cells_trans)
     sys.stdout = open('cell_frames.txt', 'w')
     print(cells_frames)
-
-    analyze_channels(["fitc", "PI"])
-
-    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans)
-
-
     sys.stdout = open('frames_cyt.txt', 'w')
     print(frames_cyt)
     sys.stdout = prev
