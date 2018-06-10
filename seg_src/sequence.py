@@ -200,6 +200,7 @@ def aggr_procs_tracked(result):
 
     cells_aux_mask_size[frame.id] = result[1]
 
+
 def aggr_procs(result):
     """
     Aggregates results of processes loading the frames.
@@ -473,7 +474,7 @@ def stabilize_sequence(debug=False, procs=2, pad_pixels=25, external=False):
         prev_phase = np.float32(seq_frames[frame - 1].images[phase_chan])
         rows, cols = phase.shape
 
-        final_shift = calc_shift(prev_phase, phase, max_shift=25, procs=4)
+        final_shift = calc_shift(prev_phase, phase, max_shift=25, procs=procs)
         final_shift = (final_shift[0] + aggr_shift_x, final_shift[1] + aggr_shift_y)
         shifts[frame] = final_shift
         print("aggregated shift = {}".format(final_shift))
@@ -583,6 +584,57 @@ def crop_img(img: np.ndarray, right: int, left: int, top: int, bottom: int) -> n
     return img
 
 
+def optimize_tracked(debug=True):
+    """
+    Parameters
+    ----------
+    debug
+
+    Returns
+    -------
+
+    """
+    for frame in range(1, max(seq_frames) - 1):  # analyze all frames except last two
+        changed = []
+        if debug:
+            print("optimizing frame {}".format(frame + 2))
+        for old_cell_id in seq_frames[frame].cells:  # iterate over all cells in frame
+            if old_cell_id not in seq_frames[frame + 1].cells:  # iterate over cells that we lost tracking of
+                # for each cell that we lost track of, check if a new cell appeared 2 frames after. If so,
+                # change that cell's id to previous its previous id.
+                tracked_img_old = seq_frames[frame].tracked_img
+                tracked_img_new = seq_frames[frame + 2].tracked_img
+
+                cell_msk_new = tracked_img_new[tracked_img_old == old_cell_id]
+                # update new cell_id to become old cell_id if there is only one label in the mask (except background)
+                cell_msk_unique = np.unique(cell_msk_new)
+                cell_msk_unique = cell_msk_unique[cell_msk_unique != 0]  # remove background
+
+                if cell_msk_unique.size == 1:
+                    new_cell_id = cell_msk_unique[0]
+                    # verify new_cell_id is not the same as the old cell_id
+                    # verify new_cell_id was not changed during current frame analysis
+                    # verify new cell_id does not exist before frame
+                    if new_cell_id != old_cell_id \
+                            and all(fr > frame for fr in cells_frames[new_cell_id]) \
+                            and new_cell_id not in changed:
+                        changed.append(new_cell_id)
+                        # in such case, update the new cell_id to be the old cell_id
+                        # tracked_img_new[tracked_img_new == new_cell_id] = old_cell_id
+                        # update label change in frame, cells_frame db
+                        corrected_frmaes = [frame_id for frame_id in cells_frames[new_cell_id] if frame_id > frame]
+                        for frame_id in corrected_frmaes:
+                            seq_frames[frame_id].cells[new_cell_id].global_label = old_cell_id
+                            seq_frames[frame_id].cells[old_cell_id] = seq_frames[frame_id].cells.pop(new_cell_id)
+                            seq_frames[frame_id].tracked_img[
+                                seq_frames[frame_id].tracked_img == new_cell_id] = old_cell_id
+                        cells_frames[old_cell_id].extend(corrected_frmaes)
+                        cells_frames.pop(new_cell_id)
+                        if debug:
+                            print("fixed cell id {} in frame {} to cell id {}".format(new_cell_id, frame + 2,
+                                                                                      old_cell_id))
+
+
 def analyze_channels(channels):
     """
 
@@ -690,7 +742,7 @@ def debug_channels(dir, channels):
                 if cell in cells_trans and channel in cells_trans[cell]:
                     if cells_trans[cell][channel] <= frame_id:
                         cv2.putText(concomps, str(channel[0]), frame.cells[cell].centroid,
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2) # FIXME put text on copy instead of original
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2)  # FIXME put text on copy instead of original
                         cv2.putText(images[channel], str(channel[0]), frame.cells[cell].centroid,
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2)
 
@@ -700,6 +752,7 @@ def debug_channels(dir, channels):
         vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
         vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
         cv2.imwrite(comps_dir + '\\' + 'eval\\' + str(frame_id) + ".tif", vis)
+
 
 def load_external(comps_dirk, ker_params, opt_params, format):
     """
@@ -733,6 +786,7 @@ if __name__ == "__main__":
     debug = False
     file_format = mpar.TitleFormat.DATE
     cached = True
+    optimized_tracking = True
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
@@ -763,7 +817,6 @@ if __name__ == "__main__":
 
         track_sequence()
 
-
         print("Finished sequence tracking\n")
     else:
         print("Started loading external sequence\n")
@@ -776,12 +829,15 @@ if __name__ == "__main__":
     load_tracked_sequence(dir_tracked="images\\L136\\A2\\4\\concomps\\track", format=mpar.TitleFormat.TRACK)
 
     # dbg.setup_ground_truth(seq_frames[1])
+    if optimized_tracking:
+        print("optimize tracking - disappearing cells (1 frame gap)\n")
+        optimize_tracked()
 
     print("Finished loading tracked sequence\n")
 
     analyze_channels(["fitc", "PI"])
 
-    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans, cells_aux_mask_size)
+    frames_cyt = dbg.create_flow_cyt_data(seq_frames, ["fitc", "PI"], cells_trans)
 
     prev = sys.stdout
     sys.stdout = open('trans.txt', 'w')
@@ -796,11 +852,11 @@ if __name__ == "__main__":
 
     debug_channels("dbg\\L136\\A2\\4", ["fitc", "PI"])
 
-
     print("Finished debug_channels\n")
 
-    dbg.evaluate_accuracy(seq_frames, cells_frames, cells_trans, sample_size=20, channels=('fitc', 'PI'))
-    dbg.plot_kinematics(cell_frames=cells_frames, cell_trans=cells_trans, frames_No=14, red_chan='PI', green_chan='fitc', all_frames=False)
+    # dbg.evaluate_accuracy(seq_frames, cells_frames, cells_trans, sample_size=20, channels=('fitc', 'PI'))
+    dbg.plot_kinematics(cell_frames=cells_frames, cell_trans=cells_trans, frames_No=14, red_chan='PI',
+                        green_chan='fitc', all_frames=False)
     dbg.plot_quantative(cells_trans, len(seq_frames))
 
     print("Finished plotting kinematics\n")

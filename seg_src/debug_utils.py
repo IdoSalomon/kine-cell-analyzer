@@ -122,7 +122,7 @@ def plot_kinematics(cell_frames, cell_trans, frames_No, red_chan='PI', green_cha
     plt.xlabel('Cell ID', fontweight='bold', size='x-large')
     plt.title('Single-Cell Dynamic Change of Parameters over Time', fontweight='bold', size=22)
     # plt.xticks(ind, [str(cell_label[i]) for i in range(len(uncolored))])
-    plt.xticks(ind, ind + 1, fontweight='bold', size='x-large')
+    plt.xticks(ind, cell_label, fontweight='bold', size='x-large')
     plt.yticks(np.arange(0, frames_No, 1), np.arange(1, frames_No + 1, 1), fontweight='bold', size='x-large')
     plt.legend((p0[0], p2[0], p3[0], p5[0]), ('Unchanged', 'PI', 'fitc', 'PI+fitc'), loc=4,
                prop={'size': 'x-large', 'weight': 'bold'})
@@ -186,7 +186,6 @@ def create_flow_cyt_data(seq_frames, channels, cells_trans):
 
                 rows.append({'Frame': frame_id, 'Cell': cell_id, 'X': cell_intensities[0], 'Y': cell_intensities[1]})
     df = pd.DataFrame(rows)
-    df.to_csv('df.csv')
     """sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 9], kind="kde")
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 9], kind="reg")
 
@@ -195,8 +194,11 @@ def create_flow_cyt_data(seq_frames, channels, cells_trans):
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 13], kind="reg")
 
     sns.jointplot(x="Y", y="X", data=df[df['Frame'] == 14], kind="kde")"""
-    df_14 = df[df['Frame'] == 1]
-    kmeans = KMeans(n_clusters=4, random_state=0).fit(df_14.reindex(columns=['X', 'Y']))
+
+    df.to_csv('kmeans.csv')
+
+    df_14 = df[df['Frame'] == 14]
+    kmeans = KMeans(n_clusters=3, random_state=0).fit(df_14.reindex(columns=['X', 'Y']))
     #kmeans = (GaussianMixture(n_components=4, covariance_type="full", tol=0.001).fit(df_14.reindex(columns=['X', 'Y']))).predict(df_14.reindex(columns=['X', 'Y']))
     # print(kmeans.labels_)
     # print(kmeans.cluster_centers_)
