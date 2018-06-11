@@ -5,3 +5,7 @@ dbg
 *.pyc
 __pycache__
 concomps/
+*.tif
+seg_src/frames_cyt.txt
+seg_src/cell_frames.txt
+seg_src/trans.txt

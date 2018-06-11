@@ -688,17 +688,32 @@ def debug_channels(dir, channels):
             for channel in channels:
                 if cell in cells_trans and channel in cells_trans[cell]:
                     if cells_trans[cell][channel] <= frame_id:
-                        cv2.putText(concomps, str(channel[0]), frame.cells[cell].centroid,
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2) # FIXME put text on copy instead of original
+                        #cv2.putText(concomps, str(channel[0]), frame.cells[cell].centroid,
+                        #            cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2) # FIXME put text on copy instead of original
                         cv2.putText(images[channel], str(channel[0]), frame.cells[cell].centroid,
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, 255, 2)
 
-        b = concomps
+        canny = cv2.Canny(concomps, 50, 255)
         g = cv2.normalize(images["fitc"], None, 0, 255, cv2.NORM_MINMAX)
+        g[g < 112] = 0
         r = cv2.normalize(images["PI"], None, 0, 255, cv2.NORM_MINMAX)
+        r[r < 40] = 0
+        b = np.zeros(b.shape)
+        b[canny == 255] = 255
+        r[canny == 255] = 255
+        g[canny == 255] = 255
+
         vis = np.dstack((b, g, r))  # TODO change so it will work for seq_nec
         vis = cv2.normalize(vis, None, 0, 255, cv2.NORM_MINMAX)
-        cv2.imwrite(comps_dir + '\\' + 'eval\\' + str(frame_id) + ".tif", vis)
+
+        phase = cv2.cvtColor(np.uint8(cv2.normalize(frame.images["phase"], None, 0, 255, cv2.NORM_MINMAX)), cv2.COLOR_GRAY2BGR)
+
+        #img1[img1[:, :, 1:].all(axis=-1)] = 0
+        #img2[img2[:, :, 1:].all(axis=-1)] = 0
+
+        dst = cv2.addWeighted(vis, 1, phase, 1, 0,None, cv2.CV_8UC1)
+
+        cv2.imwrite(comps_dir + '\\' + 'eval\\' + str(frame_id) + ".tif", dst)
 
 def load_external(comps_dirk, ker_params, opt_params, format):
     """
@@ -727,11 +742,11 @@ if __name__ == "__main__":
     # params
     dir = "images\\L136\\A2\\4"
     comps_dir = "images\\L136\\A2\\4\\concomps"
-    iterations = 15
+    iterations = 3
     procs = 3
     debug = False
     file_format = mpar.TitleFormat.DATE
-    cached = False
+    cached = True
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
