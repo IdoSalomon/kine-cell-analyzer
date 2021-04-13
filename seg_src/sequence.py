@@ -29,11 +29,11 @@ seq_frames = {}  # dictionary <int,Frame> that holds all frames in sequence by n
 label_colors = {}  # dictionary <int, int> that holds constant colors for each labelled cells
 
 channel_types = ["GFP", "FITC", "fitc", "pi", "PI", "PHASE", "phase", "TxRed", "TRANS",
-                 "trans"]  # different channels in sequence TODO turn to user input
+                 "trans", "PURPLE"]  # different channels in sequence TODO turn to user input
 
 seg_channel_types = ["PHASE", "TRANS", "phase"]  # different channels in sequence to segment TODO turn to user input
 
-aux_channel_types = ["GFP", "TxRed", "fitc", "FITC", "PI", "pi"]
+aux_channel_types = ["GFP", "TxRed", "fitc", "FITC", "PI", "pi", "PURPLE"]
 
 cells_frames = {}  # dictionary <int, list<int>> that holds IDs of frame in which the cell appeared
 
@@ -238,19 +238,20 @@ def load_sequence(dir, ker_params, opt_params, comps_dir, format, debug=True, it
         Number of concurrent processes to run
 
     """
-    pool = mp.Pool(processes=procs)
-    i = 0
-
-    # Load all frames
+    # pool = mp.Pool(processes=procs)
+    # i = 0
+    #
+    # # Load all frames
+    # for interval in seq_paths:
+    #     pool.apply_async(load_frame, args=(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug),
+    #                      callback=aggr_procs)
+    #     i += 1
+    #     if i >= itr:
+    #         break
+    # pool.close()
+    # pool.join()
     for interval in seq_paths:
-        pool.apply_async(load_frame, args=(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug),
-                         callback=aggr_procs)
-        i += 1
-        if i >= itr:
-            break
-    pool.close()
-    pool.join()
-
+        load_frame(interval, ker_params, opt_params, seq_paths, comps_dir, format, debug)
     print("Finished loading sequence!\n")  # DEBUG
 
 
@@ -794,18 +795,18 @@ if __name__ == "__main__":
     opt_params = OptParams(smooth_weight=1, spars_weight=0.4, sel_basis=1, epsilon=3, gamma=3, img_scale=0.5,
                            max_itr=100, opt_tolr=np.finfo(float).eps)
     # params
-    dir = "images\\L136\\A2\\4"
-    comps_dir = "images\\L136\\A2\\4\\concomps"
+    dir = "images/dor"
+    comps_dir = "images/dor/concomps"
     iterations = 15
-    procs = psutil.cpu_count(logical=False)  # where available, run in parallel on all physical cpu cores
-    debug = False
-    file_format = mpar.TitleFormat.DATE
-    cached = True
+    procs = 1  # where available, run in parallel on all physical cpu cores
+    debug = True
+    file_format = mpar.TitleFormat.TRACK
+    cached = False
     optimized_tracking = True
     seq_paths = io_utils.load_paths(dir, format=file_format)
 
     if not cached:
-        """dir = "images\\seq_nec"
+        """dir = "images/seq_nec"
         comps_dir = "images\\seq_nec\\concomps"""
 
         # load_tracked_masks("images\\seq_nec\\tracked")
@@ -819,7 +820,7 @@ if __name__ == "__main__":
 
         print("Started sequence stabilization\n")
 
-        stabilize_sequence(debug, procs)
+        #stabilize_sequence(debug, procs)
 
         print("Finished sequence stabilization\n")
 
@@ -830,7 +831,7 @@ if __name__ == "__main__":
 
         print("Started sequence tracking\n")
 
-        track_sequence()
+        #track_sequence()
 
         print("Finished sequence tracking\n")
     else:
@@ -841,7 +842,7 @@ if __name__ == "__main__":
 
     print("Started loading tracked sequence\n")
 
-    load_tracked_sequence(dir_tracked="images\\L136\\A2\\4\\concomps\\track", format=mpar.TitleFormat.TRACK)
+    #load_tracked_sequence(dir_tracked="images\\L136\\A2\\4\\concomps\\track", format=mpar.TitleFormat.TRACK)
 
     # dbg.setup_ground_truth(seq_frames[1])
     if optimized_tracking:

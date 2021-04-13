@@ -119,7 +119,7 @@ def extract_num(title, format=par.TitleFormat.DATE):
 
             return index
         elif format == par.TitleFormat.TRACK:
-            return int(title[-3:])
+            return 1
 
         """elif format == par.TitleFormat.DATE:
             filename, file_extension = os.path.splitext(title)
@@ -141,9 +141,9 @@ def load_paths(dir, format=par.TitleFormat.DATE):
                 if "trk-" in name:
                     name = filename
                 if name in paths:
-                    paths[name].append("\\".join([dir, f]))
+                    paths[name].append("/".join([dir, f]))
                 else:
-                    path_lst = ["\\".join([dir, f])]
+                    path_lst = ["/".join([dir, f])]
                     paths[name] = path_lst
     return paths
 

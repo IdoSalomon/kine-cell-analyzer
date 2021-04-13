@@ -81,7 +81,7 @@ def prec_sparse(img, opt_params, ker_params, debug=False):
             save_debug_fig(imgs, 'prec_sparse.png')
             # Save channel image
             rgb = cv2.normalize(img_copy[:, :, sel_ind], None, 0, 255, cv2.NORM_MINMAX)
-            cv2.imwrite("dbg\\restored_image_" + str(sel_ind) + ".png", rgb)
+            cv2.imwrite("dbg/restored_image_" + str(sel_ind) + ".png", rgb)
 
         if np.linalg.norm(resd_img[:, :, sel_ind]) / np.linalg.norm(resd_img[:, :, 0]) < 0.01:
             break
@@ -93,6 +93,6 @@ def prec_sparse(img, opt_params, ker_params, debug=False):
     if False:
         # Save final BGR image
         bgr = cv2.normalize(img_proc, None, 0, 255, cv2.NORM_MINMAX)
-        cv2.imwrite("dbg\\restored_image.png", bgr)
+        cv2.imwrite("dbg/restored_image.png", bgr)
 
     return img_proc

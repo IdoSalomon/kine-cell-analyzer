@@ -276,8 +276,8 @@ def phase_seg(basis, img, opt_params, debug=False):
     nfBin = 31
 
     # Load trained data TODO seq_train
-    immag_data = scipy.io.loadmat("data\\ImMagFRange2.58313131.mat")
-    prior_data = scipy.io.loadmat("data\\PriorAndCfd2.58313131.mat")
+    immag_data = scipy.io.loadmat("data/ImMagFRange2.58313131.mat")
+    prior_data = scipy.io.loadmat("data/PriorAndCfd2.58313131.mat")
     maxim = immag_data['maxim']
     minim = immag_data['minim']
     maxmag = immag_data['maxmag']

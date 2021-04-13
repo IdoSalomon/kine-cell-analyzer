@@ -92,7 +92,7 @@ def bg_removal(img, debug=False):
     if debug:
         imgs = [(img, 'original image:'), (flattened, 'flattened image:'), (bg, 'background image:')]
         dbg.save_debug_fig(imgs, 'bgRemoval.png')
-        cv2.imwrite("dbg\\bg_removal_flattened.png", flattened)
+        cv2.imwrite("dbg/bg_removal_flattened.png", flattened)
 
     return flattened
 
